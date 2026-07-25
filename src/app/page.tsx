@@ -8,7 +8,6 @@ import { EmployeesView } from '../components/EmployeesView';
 import { IngestLeadModal } from '../components/IngestLeadModal';
 import { LeadDetailDrawer } from '../components/LeadDetailDrawer';
 import { AuthModal } from '../components/AuthModal';
-import { DbHandoverModal } from '../components/DbHandoverModal';
 
 import {
   INITIAL_LEADS,
@@ -27,7 +26,6 @@ export default function Home() {
 
   // Modals state
   const [isIngestModalOpen, setIsIngestModalOpen] = useState(false);
-  const [isDbModalOpen, setIsDbModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
@@ -70,7 +68,6 @@ export default function Home() {
       <Navbar
         session={session}
         onOpenIngestModal={() => setIsIngestModalOpen(true)}
-        onOpenDbModal={() => setIsDbModalOpen(true)}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onLogout={() => setSession({ isAuthenticated: false, user: null })}
         searchQuery={searchQuery}
@@ -135,8 +132,6 @@ export default function Home() {
         onClose={() => setIsAuthModalOpen(false)}
         onLoginSuccess={setSession}
       />
-
-      <DbHandoverModal isOpen={isDbModalOpen} onClose={() => setIsDbModalOpen(false)} />
     </div>
   );
 }

@@ -17,7 +17,6 @@ import { UserSession } from '../lib/types';
 interface NavbarProps {
   session: UserSession;
   onOpenIngestModal: () => void;
-  onOpenDbModal: () => void;
   onOpenAuthModal: () => void;
   onLogout: () => void;
   searchQuery: string;
@@ -27,7 +26,6 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   session,
   onOpenIngestModal,
-  onOpenDbModal,
   onOpenAuthModal,
   onLogout,
   searchQuery,
@@ -141,16 +139,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Action Buttons & Auth Pill */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* DB Schema Export Button for Friend */}
-          <button
-            onClick={onOpenDbModal}
-            className="btn-apple-secondary"
-            title="Download PostgreSQL DDL & Prisma schema for DB engineer"
-          >
-            <Database size={15} color="#60a5fa" />
-            <span style={{ fontSize: '12px' }}>DB Schema DDL</span>
-          </button>
-
           {/* New Lead Ingestion */}
           <button onClick={onOpenIngestModal} className="btn-apple-primary">
             <PlusCircle size={17} />
