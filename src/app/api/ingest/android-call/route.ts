@@ -61,8 +61,8 @@ export async function POST(req: NextRequest) {
           const sarvamForm = new FormData();
           const blob = new Blob([buffer], { type: audioFile.type || 'audio/m4a' });
           sarvamForm.append('file', blob, 'recording.m4a');
-          sarvamForm.append('model', 'saarika:v2'); // Sarvam's flagship Indian Speech STT model
-          sarvamForm.append('language_code', 'unknown'); // Auto-detect Kannada, Hindi, English, etc.
+          sarvamForm.append('model', 'saarika:v2.5'); // Sarvam AI flagship Kannada & Indian regional STT model
+          sarvamForm.append('language_code', 'unknown'); // Auto-detect Kannada (kn-IN), Hindi, Hinglish, etc.
 
           const sarvamRes = await fetch('https://api.sarvam.ai/speech-to-text', {
             method: 'POST',
