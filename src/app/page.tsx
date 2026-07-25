@@ -1,6 +1,7 @@
 'use client';
 
 // TRYAM Automation - Autonomous Omnichannel Loan Settlement Operating System Dashboard
+// STT Engine: Sarvam AI saarika:v2.5 (Kannada & Regional Indian Speech STT) + Groq Whisper
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import { MetricsOverview } from '../components/MetricsOverview';
