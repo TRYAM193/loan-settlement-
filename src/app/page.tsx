@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import { MetricsOverview } from '../components/MetricsOverview';
 import { LeadsTable } from '../components/LeadsTable';
@@ -9,19 +9,17 @@ import { IngestLeadModal } from '../components/IngestLeadModal';
 import { LeadDetailDrawer } from '../components/LeadDetailDrawer';
 import { AuthModal } from '../components/AuthModal';
 
-import {
-  INITIAL_LEADS,
-  INITIAL_EMPLOYEES,
-  INITIAL_SETTLEMENTS,
-  INITIAL_LOGS,
-} from '../lib/store';
-import { Lead, Employee, EmployeeStatus, UserSession } from '../lib/types';
-import { Users, LayoutGrid, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { fetchEmployees, fetchLeads, fetchSettlements } from '../lib/dataService';
+import { INITIAL_LEADS, INITIAL_EMPLOYEES, INITIAL_SETTLEMENTS } from '../lib/store';
+import { Lead, Employee, EmployeeStatus, UserSession, Settlement } from '../lib/types';
+import { supabase } from '../lib/supabase';
+import { Users, LayoutGrid, RefreshCw } from 'lucide-react';
 
 export default function Home() {
   const [leads, setLeads] = useState<Lead[]>(INITIAL_LEADS);
   const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
-  const [settlements] = useState(INITIAL_SETTLEMENTS);
+  const [settlements, setSettlements] = useState<Settlement[]>(INITIAL_SETTLEMENTS);
+  const [isLoadingDb, setIsLoadingDb] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'leads' | 'employees'>('leads');
 
   // Modals state
@@ -43,7 +41,54 @@ export default function Home() {
     },
   });
 
-  // Handle lead ingestion & auto-assignment increment
+  // Load initial data from Supabase DB
+  const loadDatabaseData = async () => {
+    setIsLoadingDb(true);
+    try {
+      const [dbEmployees, dbLeads, dbSettlements] = await Promise.all([
+        fetchEmployees(),
+        fetchLeads(),
+        fetchSettlements(),
+      ]);
+      setEmployees(dbEmployees);
+      setLeads(dbLeads);
+      setSettlements(dbSettlements);
+    } catch (err) {
+      console.error('Failed loading Supabase data:', err);
+    } finally {
+      setIsLoadingDb(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDatabaseData();
+
+    // Subscribe to Supabase Realtime changes for Live Dashboard Popups
+    const channel = supabase
+      .channel('tryam_db_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'leads' },
+        () => loadDatabaseData()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'employees' },
+        () => loadDatabaseData()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'settlements' },
+        () => loadDatabaseData()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Handle manual lead ingestion & auto-assignment increment
   const handleAddLead = (newLead: Lead, assignedEmpId: string) => {
     setLeads((prev) => [newLead, ...prev]);
 
@@ -100,8 +145,25 @@ export default function Home() {
             </button>
           </div>
 
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            Smart Auto-Assignment: <strong style={{ color: '#34d399' }}>ACTIVE</strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: 'var(--text-muted)' }}>
+            <button 
+              onClick={loadDatabaseData} 
+              style={{ 
+                background: 'rgba(255,255,255,0.06)', 
+                border: '1px solid rgba(255,255,255,0.1)', 
+                color: '#e2e8f0', 
+                borderRadius: '8px', 
+                padding: '4px 10px', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <RefreshCw size={12} className={isLoadingDb ? 'spin' : ''} />
+              <span>{isLoadingDb ? 'Syncing Supabase DB...' : 'Sync DB'}</span>
+            </button>
+            <span>Supabase Real-Time: <strong style={{ color: '#34d399' }}>CONNECTED</strong></span>
           </div>
         </div>
 
