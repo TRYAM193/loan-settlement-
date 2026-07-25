@@ -1,5 +1,6 @@
 'use client';
 
+// TRYAM Automation - Autonomous Omnichannel Loan Settlement Operating System Dashboard
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import { MetricsOverview } from '../components/MetricsOverview';
