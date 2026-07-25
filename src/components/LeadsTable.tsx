@@ -113,6 +113,12 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onSelectLead, sea
             Calls
           </button>
           <button
+            onClick={() => setFilterChannel('email')}
+            className={`apple-pill-item ${filterChannel === 'email' ? 'active' : ''}`}
+          >
+            Email
+          </button>
+          <button
             onClick={() => setFilterChannel('harassment')}
             className={`apple-pill-item ${filterChannel === 'harassment' ? 'active' : ''}`}
           >
