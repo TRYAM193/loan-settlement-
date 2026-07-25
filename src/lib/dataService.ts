@@ -7,17 +7,15 @@ import { INITIAL_EMPLOYEES, INITIAL_LEADS, INITIAL_SETTLEMENTS, INITIAL_LOGS } f
  */
 export async function fetchEmployees(): Promise<Employee[]> {
   try {
-    const { data, error } = await supabase
-      .from('employees')
-      .select('*');
-
-    if (error) {
-      console.warn('Supabase error fetching employees:', error.message);
+    const res = await fetch('/api/employees');
+    const json = await res.json();
+    
+    if (!res.ok || !json.success || !json.data) {
+      console.warn('Error fetching employees from API:', json.error);
       return [];
     }
-    if (!data) return [];
 
-    return data.map((emp: any) => ({
+    return json.data.map((emp: any) => ({
       id: emp.id,
       name: emp.name || 'Unknown Agent',
       email: emp.email || '',
@@ -41,17 +39,15 @@ export async function fetchEmployees(): Promise<Employee[]> {
  */
 export async function fetchLeads(): Promise<Lead[]> {
   try {
-    const { data, error } = await supabase
-      .from('leads')
-      .select('*, employees(id, name)');
-
-    if (error) {
-      console.warn('Supabase error fetching leads:', error.message);
+    const res = await fetch('/api/leads');
+    const json = await res.json();
+    
+    if (!res.ok || !json.success || !json.data) {
+      console.warn('Error fetching leads from API:', json.error);
       return [];
     }
-    if (!data) return [];
 
-    return data.map((lead: any) => ({
+    return json.data.map((lead: any) => ({
       id: lead.id,
       fullName: lead.full_name || lead.phone || 'Inbound Lead',
       phone: lead.phone,
