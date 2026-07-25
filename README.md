@@ -36,6 +36,10 @@
 * **Live Dashboard Sync:** Next.js 16 + React 19 interface subscribed to Supabase PostgreSQL Realtime channels (`supabase_realtime`).
 * **KPI Metrics:** Displays Total Debt Portfolio, Active Settlements, Employee Caseload Radar, and Audio Call Player.
 
+### 7. 🤖 Admin AI Assistant Chatbot (`/api/chat`)
+* **Live DB Context AI:** Floating glassmorphic AI chatbot widget embedded in the CRM UI for real-time querying of employee workloads, debt portfolio metrics, WhatsApp dispatch status, and settlement strategies.
+* **Configurable AI Engine:** Supports Google Gemini (`GEMINI_API_KEY`) & OpenAI API keys, with an intelligent context-aware local database fallback engine.
+
 ---
 
 ## 🛠️ System Architecture
@@ -67,6 +71,11 @@ Ingests call audio from the Android app, uploads recording to Supabase Storage, 
 Admin endpoint to reassign or approve an employee for a lead, triggering dual WhatsApp & Email notifications.
 
 * **Body JSON:** `{ "leadId": "string", "employeeId": "string", "adminApproved": true }`
+
+### 3. `POST /api/chat`
+Admin AI Assistant endpoint for querying live database metrics, team capacity, and settlement advice.
+
+* **Body JSON:** `{ "message": "string", "history": [], "customApiKey": "string" }`
 
 ---
 
