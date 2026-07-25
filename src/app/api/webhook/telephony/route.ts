@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { sendNewLeadAssignmentWhatsAppToEmployee } from '@/lib/whatsappService';
 
 /**
  * Telephony Webhook Ingestion API
@@ -37,10 +38,15 @@ export async function POST(req: Request) {
 
     let leadId: string;
     let assignedEmpId: string | null = null;
+    let assignedEmp: any = null;
 
     if (existingLeads && existingLeads.length > 0) {
       leadId = existingLeads[0].id;
       assignedEmpId = existingLeads[0].assigned_employee_id;
+      if (assignedEmpId) {
+        const { data: emp } = await supabase.from('employees').select('*').eq('id', assignedEmpId).single();
+        assignedEmp = emp;
+      }
     } else {
       // 2. Fetch available employees to pick the one with lowest active cases
       const { data: employees } = await supabase
@@ -52,6 +58,7 @@ export async function POST(req: Request) {
 
       if (employees && employees.length > 0) {
         assignedEmpId = employees[0].id;
+        assignedEmp = employees[0];
       }
 
       // Create new lead record
@@ -65,7 +72,6 @@ export async function POST(req: Request) {
             status: 'assigned',
             assigned_employee_id: assignedEmpId,
             total_debt_amount: totalDebtAmount,
-            notes: `Inbound call (${duration}s). Audio recording captured.`,
           },
         ])
         .select();
@@ -77,15 +83,35 @@ export async function POST(req: Request) {
       leadId = newLead[0].id;
 
       // Increment employee active cases if assigned
-      if (assignedEmpId && employees && employees.length > 0) {
+      if (assignedEmpId && assignedEmp) {
         await supabase
           .from('employees')
-          .update({ active_caseload: employees[0].active_caseload + 1 })
+          .update({ active_caseload: (assignedEmp.active_caseload || 0) + 1 })
           .eq('id', assignedEmpId);
       }
     }
 
-    // 3. Create lead log entry for the call
+    // 3. Dispatch WhatsApp alert to the assigned employee with client details
+    let whatsappResult = null;
+    if (assignedEmp) {
+      whatsappResult = await sendNewLeadAssignmentWhatsAppToEmployee({
+        employee: {
+          id: assignedEmp.id,
+          name: assignedEmp.name || 'Agent',
+          phone: assignedEmp.phone || '+919876543210',
+          email: assignedEmp.email || '',
+        },
+        lead: {
+          id: leadId,
+          fullName,
+          phone,
+          totalDebtAmount,
+          source: 'inbound_call',
+        },
+      });
+    }
+
+    // 4. Create lead log entry for the call
     const { data: logData, error: logErr } = await supabase
       .from('lead_logs')
       .insert([
@@ -94,7 +120,7 @@ export async function POST(req: Request) {
           employee_id: assignedEmpId,
           channel: 'inbound_call',
           recording_url: recordingUrl,
-          transcript: transcript,
+          raw_transcript: transcript,
           ai_summary: aiSummary,
           sentiment: 'Urgent',
         },
@@ -107,10 +133,12 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Telephony webhook ingested & lead assigned successfully',
+      message: 'Telephony webhook ingested & WhatsApp alert dispatched to employee',
       data: {
         leadId,
         assignedEmployeeId: assignedEmpId,
+        assignedEmployee: assignedEmp ? { name: assignedEmp.name, phone: assignedEmp.phone } : null,
+        whatsappResult,
         log: logData[0],
       },
     });

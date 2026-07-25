@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# apk build artifacts
+*.apk
+*.jar
+*.keystore
+temp_apk_extract
+decoded_apk
+app-debug.zip

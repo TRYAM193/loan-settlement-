@@ -32,33 +32,54 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
   const numDebt = parseFloat(debtAmount) || 0;
   const bestAssignment = calculateBestEmployee(employees, numDebt);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName || !phone) return;
 
     const assignedEmp = bestAssignment ? bestAssignment.employee : employees[0];
 
-    const newLead: Lead = {
-      id: `lead-${Date.now().toString().slice(-4)}`,
-      fullName,
-      phone,
-      email: email || `${fullName.toLowerCase().replace(/\s+/g, '.')}@client.com`,
-      source,
-      status: 'assigned',
-      assignedEmployeeId: assignedEmp.id,
-      assignedEmployeeName: assignedEmp.name,
-      totalDebtAmount: numDebt,
-      lenders: [
-        { name: 'Primary Bank Loan / Credit Card', amount: numDebt, type: 'Credit Debt' },
-      ],
-      distressScore,
-      harassmentReported: harassment,
-      createdAt: new Date().toISOString(),
-      notes: notes || `Client logged via ${source.replace('_', ' ')}. Smart workload engine routed to ${assignedEmp.name}.`,
-    };
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName,
+          phone,
+          email: email || `${fullName.toLowerCase().replace(/\s+/g, '.')}@client.com`,
+          source,
+          totalDebtAmount: numDebt,
+          assignedEmployeeId: assignedEmp ? assignedEmp.id : undefined,
+          notes: notes || `Client logged via ${source.replace('_', ' ')}. Smart workload engine routed to ${assignedEmp ? assignedEmp.name : 'Team'}.`,
+        }),
+      });
 
-    onAddLead(newLead, assignedEmp.id);
-    onClose();
+      const json = await res.json();
+      if (json.success && json.data) {
+        onAddLead(
+          {
+            id: json.data.id,
+            fullName: json.data.full_name,
+            phone: json.data.phone,
+            email: json.data.email,
+            source: json.data.source,
+            status: json.data.status,
+            assignedEmployeeId: json.data.assigned_employee_id,
+            assignedEmployeeName: assignedEmp ? assignedEmp.name : 'Assigned Agent',
+            totalDebtAmount: Number(json.data.total_debt_amount || 0),
+            lenders: [{ name: 'Primary Bank Loan / Credit Card', amount: numDebt, type: 'Credit Debt' }],
+            distressScore,
+            harassmentReported: harassment,
+            createdAt: json.data.created_at || new Date().toISOString(),
+            notes: json.data.notes,
+          },
+          assignedEmp ? assignedEmp.id : ''
+        );
+      }
+    } catch (err) {
+      console.error('Failed to post new lead:', err);
+    } finally {
+      onClose();
+    }
   };
 
   return (

@@ -188,6 +188,7 @@ export default function Home() {
         lead={selectedLead}
         onClose={() => setSelectedLead(null)}
         employees={employees}
+        onRefreshData={loadDatabaseData}
       />
 
       <AuthModal

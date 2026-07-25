@@ -1,22 +1,28 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, FileText, Send, ShieldAlert, Check, Copy, User, Phone, Mail, Building } from 'lucide-react';
+import { X, FileText, Send, ShieldAlert, Check, Copy, User, Phone, Mail, Building, MessageSquare, RefreshCw } from 'lucide-react';
 import { Lead, Employee } from '../lib/types';
+import { generateEmployeeNotificationText, getWhatsAppClickUrl } from '../lib/whatsappService';
 
 interface LeadDetailDrawerProps {
   lead: Lead | null;
   onClose: () => void;
   employees: Employee[];
+  onRefreshData?: () => void;
 }
 
-export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({ lead, onClose, employees }) => {
+export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({ lead, onClose, employees, onRefreshData }) => {
   const [copiedNotice, setCopiedNotice] = useState(false);
-  const [copiedStatus, setCopiedStatus] = useState(false);
+  const [copiedWhatsAppText, setCopiedWhatsAppText] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [selectedEmpId, setSelectedEmpId] = useState<string>('');
+  const [notificationStatus, setNotificationStatus] = useState<string | null>(null);
 
   if (!lead) return null;
 
-  const assignedEmp = employees.find((e) => e.id === lead.assignedEmployeeId);
+  const currentEmpId = selectedEmpId || lead.assignedEmployeeId;
+  const assignedEmp = employees.find((e) => e.id === currentEmpId);
 
   const legalNoticeText = `FORMAL LEGAL REPRESENTATION & CEASE-AND-DESIST NOTICE
 
@@ -32,12 +38,52 @@ Notice is hereby served under RBI Guidelines on Fair Practices Code for Lenders 
 
 Issued by TRYAM Enterprise Debt Hub`;
 
-  const whatsappStatusText = `Hello ${lead.fullName}, your settlement proposal with ${lead.lenders[0]?.name || 'Bank'} is currently in active review. Target waiver range: 40%–45%. Your assigned specialist is ${lead.assignedEmployeeName || 'Rahul'}. Next review date: 28th.`;
+  const employeeNotificationMessage = generateEmployeeNotificationText(
+    assignedEmp ? assignedEmp.name : 'Team Agent',
+    {
+      fullName: lead.fullName,
+      phone: lead.phone,
+      email: lead.email,
+      totalDebtAmount: lead.totalDebtAmount,
+      source: lead.source,
+    }
+  );
+
+  const whatsappUrl = assignedEmp?.phone
+    ? getWhatsAppClickUrl(assignedEmp.phone, employeeNotificationMessage)
+    : '#';
 
   const copyToClipboard = (text: string, setCopied: (v: boolean) => void) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleReassignEmployee = async (newEmpId: string) => {
+    if (!newEmpId || newEmpId === lead.assignedEmployeeId) return;
+    setIsAssigning(true);
+    setNotificationStatus(null);
+
+    try {
+      const res = await fetch('/api/leads/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId: lead.id, employeeId: newEmpId }),
+      });
+      const json = await res.json();
+
+      if (json.success) {
+        setSelectedEmpId(newEmpId);
+        setNotificationStatus(`Assigned to ${json.data.employee.name}. WhatsApp alert dispatched!`);
+        if (onRefreshData) onRefreshData();
+      } else {
+        setNotificationStatus(`Error: ${json.error}`);
+      }
+    } catch (err: any) {
+      setNotificationStatus(`Failed to reassign: ${err.message}`);
+    } finally {
+      setIsAssigning(false);
+    }
   };
 
   return (
@@ -114,7 +160,7 @@ Issued by TRYAM Enterprise Debt Hub`;
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-primary)' }}>
             <Mail size={15} color="#38bdf8" />
-            <span>{lead.email}</span>
+            <span>{lead.email || 'No email provided'}</span>
           </div>
         </div>
 
@@ -131,7 +177,7 @@ Issued by TRYAM Enterprise Debt Hub`;
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {lead.lenders.map((lender, idx) => (
+            {(lead.lenders || []).map((lender, idx) => (
               <div
                 key={idx}
                 style={{
@@ -156,12 +202,16 @@ Issued by TRYAM Enterprise Debt Hub`;
           </div>
         </div>
 
-        {/* Assigned Rep Section */}
+        {/* Assigned Rep & Reassignment Dropdown */}
         <div className="glass-card" style={{ padding: '20px', marginBottom: '24px' }}>
-          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            Workload-Assigned Employee
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+              Assigned Employee & Caseload
+            </span>
+            {isAssigning && <RefreshCw size={14} className="spin" color="#6366f1" />}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
             <div
               style={{
                 width: '44px',
@@ -176,17 +226,92 @@ Issued by TRYAM Enterprise Debt Hub`;
                 color: '#fff',
               }}
             >
-              {lead.assignedEmployeeName ? lead.assignedEmployeeName.charAt(0) : 'U'}
+              {assignedEmp ? assignedEmp.name.charAt(0) : 'U'}
             </div>
-            <div>
+            <div style={{ flex: 1 }}>
               <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#fff' }}>
-                {lead.assignedEmployeeName || 'Unassigned'}
+                {assignedEmp ? assignedEmp.name : 'Unassigned Employee'}
               </h4>
               <p style={{ fontSize: '12px', color: '#a5b4fc' }}>
-                {assignedEmp ? `${assignedEmp.role.replace('_', ' ')} • ${assignedEmp.activeCases} active cases` : 'Pending Workload Assignment'}
+                {assignedEmp ? `${assignedEmp.phone} • ${assignedEmp.email}` : 'Assign an employee to start handling'}
               </p>
             </div>
           </div>
+
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <select
+              value={currentEmpId}
+              onChange={(e) => handleReassignEmployee(e.target.value)}
+              disabled={isAssigning}
+              className="apple-input"
+              style={{ flex: 1, padding: '8px 12px', fontSize: '13px', borderRadius: '10px' }}
+            >
+              <option value="">Select Employee to Assign...</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.name} ({emp.activeCases} active cases)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {notificationStatus && (
+            <p style={{ fontSize: '12px', color: '#34d399', marginTop: '10px', fontWeight: 500 }}>
+              {notificationStatus}
+            </p>
+          )}
+        </div>
+
+        {/* WhatsApp Notification Alert Card (Sent TO Employee) */}
+        <div className="glass-card" style={{ padding: '20px', marginBottom: '24px', border: '1px solid rgba(52, 211, 153, 0.3)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <MessageSquare size={18} color="#34d399" />
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#34d399' }}>
+                WhatsApp Employee Alert Preview
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => copyToClipboard(employeeNotificationMessage, setCopiedWhatsAppText)}
+                className="btn-apple-secondary"
+                style={{ padding: '6px 12px', fontSize: '11px' }}
+              >
+                {copiedWhatsAppText ? <Check size={13} color="#34d399" /> : <Copy size={13} />}
+                <span>{copiedWhatsAppText ? 'Copied' : 'Copy Text'}</span>
+              </button>
+              {assignedEmp?.phone && (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-apple-primary"
+                  style={{ padding: '6px 12px', fontSize: '11px', textDecoration: 'none', background: '#059669', color: '#fff' }}
+                >
+                  <Send size={13} />
+                  <span>Open WhatsApp</span>
+                </a>
+              )}
+            </div>
+          </div>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+            This WhatsApp alert with client details (Name, Phone, Email, Debt) is automatically sent to{' '}
+            <strong>{assignedEmp ? assignedEmp.name : 'the assigned employee'}</strong> ({assignedEmp ? assignedEmp.phone : 'N/A'}).
+          </p>
+          <pre
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '11px',
+              color: '#a7f3d0',
+              background: 'rgba(0, 0, 0, 0.4)',
+              padding: '12px',
+              borderRadius: '10px',
+              whiteSpace: 'pre-wrap',
+              lineHeight: '1.5',
+            }}
+          >
+            {employeeNotificationMessage}
+          </pre>
         </div>
 
         {/* Anti-Harassment Legal Notice Generator */}
@@ -197,7 +322,6 @@ Issued by TRYAM Enterprise Debt Hub`;
               border: '1px solid rgba(244, 63, 94, 0.3)',
               borderRadius: '16px',
               padding: '20px',
-              marginBottom: '24px',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
@@ -232,26 +356,6 @@ Issued by TRYAM Enterprise Debt Hub`;
             </pre>
           </div>
         )}
-
-        {/* WhatsApp Automated Status Auto-Responder */}
-        <div className="glass-card" style={{ padding: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#38bdf8' }}>
-              WhatsApp Auto Status Update Payload
-            </span>
-            <button
-              onClick={() => copyToClipboard(whatsappStatusText, setCopiedStatus)}
-              className="btn-apple-secondary"
-              style={{ padding: '6px 12px', fontSize: '11px' }}
-            >
-              {copiedStatus ? <Check size={13} color="#34d399" /> : <Send size={13} />}
-              <span>{copiedStatus ? 'Sent to WhatsApp' : 'Copy Payload'}</span>
-            </button>
-          </div>
-          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '10px' }}>
-            {whatsappStatusText}
-          </p>
-        </div>
       </div>
     </div>
   );
