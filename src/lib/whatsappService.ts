@@ -25,7 +25,7 @@ export function formatPhoneForWhatsApp(phone: string): string {
   if (!phone) return '';
   const cleaned = phone.replace(/[^0-9+]/g, '');
   if (!cleaned.startsWith('+') && cleaned.length === 10) {
-    return `+91${cleaned}`; // Default to India prefix if 10 digits
+    return `+91${cleaned}`; // Default to India country prefix if 10 digits
   }
   return cleaned;
 }
@@ -52,7 +52,7 @@ Please contact this client as soon as possible to review their settlement case.`
 }
 
 /**
- * Generates a direct whatsapp:// or https://wa.me/ link for quick click-to-chat
+ * Generates direct native WhatsApp links (wa.me & api.whatsapp.com) using your own phone numbers
  */
 export function getWhatsAppClickUrl(phone: string, text: string): string {
   const cleanPhone = formatPhoneForWhatsApp(phone).replace('+', '');
@@ -60,7 +60,8 @@ export function getWhatsAppClickUrl(phone: string, text: string): string {
 }
 
 /**
- * Dispatches WhatsApp notification to employee and logs entry in Supabase lead_logs
+ * Dispatches WhatsApp notification directly via Meta WhatsApp Cloud API (or Direct Deep-linking)
+ * and logs entry in Supabase lead_logs.
  */
 export async function sendNewLeadAssignmentWhatsAppToEmployee(
   payload: WhatsAppNotificationPayload
@@ -69,60 +70,57 @@ export async function sendNewLeadAssignmentWhatsAppToEmployee(
   const messageText = generateEmployeeNotificationText(employee.name, lead);
   const whatsappUrl = getWhatsAppClickUrl(employee.phone, messageText);
 
-  console.log(`[WhatsApp Dispatcher] Sending alert to Employee ${employee.name} (${employee.phone}):\n${messageText}`);
+  console.log(`[WhatsApp Direct Dispatcher] Alert generated for ${employee.name} (${employee.phone}):\n${messageText}`);
 
   try {
-    // 1. Check if external Twilio / WhatsApp credentials exist
-    const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
-    const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
-    const twilioFromNumber = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
+    let externalStatus = 'Direct WhatsApp Link & Local Audit Dispatched';
 
-    let externalStatus = 'Simulated Local Dispatch';
+    // Check if Meta WhatsApp Cloud API credentials exist (using your own Meta/WhatsApp Business number)
+    const metaPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    const metaAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
 
-    if (twilioAccountSid && twilioAuthToken) {
+    if (metaPhoneId && metaAccessToken) {
       try {
-        const toPhone = `whatsapp:${formatPhoneForWhatsApp(employee.phone)}`;
-        const authHeader = 'Basic ' + Buffer.from(`${twilioAccountSid}:${twilioAuthToken}`).toString('base64');
-        
-        const bodyParams = new URLSearchParams({
-          From: twilioFromNumber,
-          To: toPhone,
-          Body: messageText,
-        });
-
+        const cleanRecipientPhone = formatPhoneForWhatsApp(employee.phone).replace('+', '');
         const res = await fetch(
-          `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`,
+          `https://graph.facebook.com/v18.0/${metaPhoneId}/messages`,
           {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-              Authorization: authHeader,
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${metaAccessToken}`,
             },
-            body: bodyParams.toString(),
+            body: JSON.stringify({
+              messaging_product: 'whatsapp',
+              recipient_type: 'individual',
+              to: cleanRecipientPhone,
+              type: 'text',
+              text: { body: messageText },
+            }),
           }
         );
 
         if (res.ok) {
-          externalStatus = 'Delivered via Twilio API';
+          externalStatus = 'Delivered via Direct Meta WhatsApp Cloud API';
         } else {
           const errData = await res.json();
-          console.warn('[WhatsApp Twilio Error]', errData);
-          externalStatus = `Twilio Failed: ${errData.message || 'API error'}`;
+          console.warn('[Meta WhatsApp API Error]', errData);
+          externalStatus = `Meta Direct API error: ${errData?.error?.message || 'Failed'}`;
         }
-      } catch (twErr: any) {
-        console.error('[WhatsApp API Exception]', twErr);
-        externalStatus = `API Exception: ${twErr.message}`;
+      } catch (metaErr: any) {
+        console.error('[Meta WhatsApp Exception]', metaErr);
+        externalStatus = `Direct API Exception: ${metaErr.message}`;
       }
     }
 
-    // 2. Log entry into Supabase lead_logs for full audit trail
+    // Log entry into Supabase lead_logs for full audit trail
     if (lead.id) {
       await supabase.from('lead_logs').insert([
         {
           lead_id: lead.id,
           employee_id: employee.id || null,
           channel: 'whatsapp',
-          ai_summary: `WhatsApp assignment alert dispatched to employee ${employee.name} (${employee.phone}). Status: ${externalStatus}`,
+          ai_summary: `Direct WhatsApp assignment alert generated for employee ${employee.name} (${employee.phone}). Status: ${externalStatus}`,
           raw_transcript: messageText,
           sentiment: 'Assigned',
         },
@@ -131,14 +129,14 @@ export async function sendNewLeadAssignmentWhatsAppToEmployee(
 
     return {
       success: true,
-      message: `WhatsApp notification ready for ${employee.name} (${externalStatus})`,
+      message: `Direct WhatsApp notification ready for ${employee.name} (${externalStatus})`,
       whatsappUrl,
     };
   } catch (err: any) {
     console.error('[WhatsApp Service Error]', err);
     return {
       success: false,
-      message: err.message || 'Failed to dispatch WhatsApp alert',
+      message: err.message || 'Failed to generate direct WhatsApp alert',
       whatsappUrl,
     };
   }

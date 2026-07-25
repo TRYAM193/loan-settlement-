@@ -15,6 +15,7 @@ import { INITIAL_LOGS } from '../lib/store';
 import { Lead, Employee, EmployeeStatus, UserSession, Settlement } from '../lib/types';
 import { supabase } from '../lib/supabase';
 import { Users, LayoutGrid, RefreshCw } from 'lucide-react';
+import { AdminChatbot } from '../components/AdminChatbot';
 
 export default function Home() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -196,6 +197,9 @@ export default function Home() {
         onClose={() => setIsAuthModalOpen(false)}
         onLoginSuccess={setSession}
       />
+
+      {/* Floating AI Admin Assistant Chatbot */}
+      <AdminChatbot leads={leads} employees={employees} settlements={settlements} />
     </div>
   );
 }
