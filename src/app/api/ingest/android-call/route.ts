@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
+import OpenAI, { toFile } from 'openai';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://asednemwscdtetqwwuts.supabase.co';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_abUml6si1hpQxE-H2K1NNA_TxdSXSVm';
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     console.log(`[VERCEL INGESTION] Processing call from ${callerPhone} (Duration: ${duration}s)`);
 
     let recordingUrl: string | null = null;
-    let rawTranscript = "Audio transcript processing skipped (Pending file or API key configuration).";
+    let rawTranscript = "Audio transcript processing skipped or unavailable.";
     let aiExtraction = {
       lenders: ["Unassigned Debt"],
       total_debt: 0,
@@ -45,26 +45,30 @@ export async function POST(req: NextRequest) {
           .from('call-recordings')
           .getPublicUrl(fileName);
         recordingUrl = publicUrlData.publicUrl;
+        console.log('[STORAGE SUCCESS] Recording stored:', recordingUrl);
+      } else {
+        console.warn('[STORAGE WARNING]', storageErr.message);
       }
 
-      // 2. OpenAI Whisper STT Transcription
+      // 2. OpenAI Whisper STT Transcription using official OpenAI `toFile` utility
       if (openai) {
-        // Create temporary File object for OpenAI SDK in Vercel Edge/Node runtime
-        const tempFile = new File([buffer], 'audio.m4a', { type: 'audio/m4a' });
-        const sttRes = await openai.audio.transcriptions.create({
-          file: tempFile,
-          model: 'whisper-1',
-          language: 'en'
-        });
-        rawTranscript = sttRes.text;
+        try {
+          console.log('[OPENAI STT] Transcribing via toFile utility...');
+          const tempFile = await toFile(buffer, 'audio.m4a', { type: 'audio/m4a' });
+          const sttRes = await openai.audio.transcriptions.create({
+            file: tempFile,
+            model: 'whisper-1',
+            language: 'en'
+          });
+          rawTranscript = sttRes.text;
 
-        // 3. GPT-4o-mini Extraction Engine
-        const llmRes = await openai.chat.completions.create({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: `You are an expert financial analyst for a debt settlement agency.
+          // 3. GPT-4o-mini Extraction Engine
+          const llmRes = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+              {
+                role: 'system',
+                content: `You are an expert financial analyst for a debt settlement agency.
 Analyze the call transcript and extract structured data strictly in valid JSON format.
 JSON Schema:
 {
@@ -75,19 +79,19 @@ JSON Schema:
   "harassment_reported": boolean,
   "summary_bullets": ["string"]
 }`
-            },
-            {
-              role: 'user',
-              content: `Call Transcript:\n"${rawTranscript}"`
-            }
-          ],
-          response_format: { type: 'json_object' }
-        });
+              },
+              {
+                role: 'user',
+                content: `Call Transcript:\n"${rawTranscript}"`
+              }
+            ],
+            response_format: { type: 'json_object' }
+          });
 
-        try {
           aiExtraction = JSON.parse(llmRes.choices[0].message.content || '{}');
-        } catch (e) {
-          console.error('JSON Parse error', e);
+        } catch (openaiErr: any) {
+          console.error('[OPENAI STT ERROR]', openaiErr.message);
+          rawTranscript = `Audio recorded. Transcription unavailable (${openaiErr.message})`;
         }
       }
     }
@@ -114,7 +118,7 @@ JSON Schema:
         assignedEmployeeId = employees[0].id;
         await supabase
           .from('employees')
-          .update({ active_caseload: employees[0].active_caseload + 1 })
+          .update({ active_caseload: (employees[0].active_caseload || 0) + 1 })
           .eq('id', employees[0].id);
       }
     }
@@ -150,7 +154,7 @@ JSON Schema:
 
     return NextResponse.json({
       success: true,
-      message: 'Call audio uploaded, transcribed, and saved to Supabase.',
+      message: 'Call audio processed and saved to Supabase database.',
       recordingUrl,
       rawTranscript,
       aiExtraction
