@@ -25,8 +25,8 @@ export async function POST(req: NextRequest) {
       summary_bullets: ["Inbound call ingested via Android app."]
     };
 
-    const groqKey = process.env.GROQ_API_KEY;
     const sarvamKey = process.env.SARVAM_API_KEY;
+    const groqKey = process.env.GROQ_API_KEY;
     const openaiKey = process.env.OPENAI_API_KEY;
 
     // 1. Upload audio file to Supabase Storage ('call-recordings')
@@ -51,11 +51,42 @@ export async function POST(req: NextRequest) {
         console.warn('[STORAGE WARNING]', storageErr.message);
       }
 
-      // 2. Multi-Provider STT Engine (Groq FREE Whisper -> Sarvam AI -> OpenAI)
+      // 2. STT Engine (Primary #1: Sarvam AI Indian Languages Speech Model)
       let sttProviderUsed = '';
 
-      if (groqKey) {
-        // Option 1: Groq Free Whisper-Large-v3
+      if (sarvamKey) {
+        // Option 1: Sarvam AI (saarika:v2 / saaras:v1) for Kannada, Hindi, Hinglish, Kanglish
+        try {
+          console.log('[STT] Transcribing via SARVAM AI Indian Languages Speech API...');
+          const sarvamForm = new FormData();
+          const blob = new Blob([buffer], { type: audioFile.type || 'audio/m4a' });
+          sarvamForm.append('file', blob, 'recording.m4a');
+          sarvamForm.append('model', 'saarika:v2'); // Sarvam's flagship Indian Speech STT model
+          sarvamForm.append('language_code', 'unknown'); // Auto-detect Kannada, Hindi, English, etc.
+
+          const sarvamRes = await fetch('https://api.sarvam.ai/speech-to-text', {
+            method: 'POST',
+            headers: {
+              'api-subscription-key': sarvamKey
+            },
+            body: sarvamForm
+          });
+
+          if (sarvamRes.ok) {
+            const data = await sarvamRes.json() as { transcript: string };
+            rawTranscript = data.transcript;
+            sttProviderUsed = 'Sarvam AI (saarika:v2)';
+            console.log('[SARVAM STT SUCCESS]:', rawTranscript);
+          } else {
+            console.error('[SARVAM STT ERROR]', sarvamRes.status, await sarvamRes.text());
+          }
+        } catch (sarvamErr: any) {
+          console.error('[SARVAM STT EXCEPTION]', sarvamErr.message);
+        }
+      }
+
+      if (!sttProviderUsed && groqKey) {
+        // Option 2: Groq Free Whisper-Large-v3
         try {
           console.log('[STT] Transcribing via GROQ FREE Whisper-Large-v3 API...');
           const whisperForm = new FormData();
@@ -81,36 +112,6 @@ export async function POST(req: NextRequest) {
           }
         } catch (groqErr: any) {
           console.error('[GROQ STT EXCEPTION]', groqErr.message);
-        }
-      }
-
-      if (!sttProviderUsed && sarvamKey) {
-        // Option 2: Sarvam AI Indian Languages STT
-        try {
-          console.log('[STT] Transcribing via SARVAM AI Indian Languages Speech API...');
-          const sarvamForm = new FormData();
-          const blob = new Blob([buffer], { type: audioFile.type || 'audio/m4a' });
-          sarvamForm.append('file', blob, 'recording.m4a');
-          sarvamForm.append('model', 'saarika:v2');
-
-          const sarvamRes = await fetch('https://api.sarvam.ai/speech-to-text', {
-            method: 'POST',
-            headers: {
-              'api-subscription-key': sarvamKey
-            },
-            body: sarvamForm
-          });
-
-          if (sarvamRes.ok) {
-            const data = await sarvamRes.json() as { transcript: string };
-            rawTranscript = data.transcript;
-            sttProviderUsed = 'Sarvam AI (saarika:v2)';
-            console.log('[SARVAM STT SUCCESS]:', rawTranscript);
-          } else {
-            console.error('[SARVAM STT ERROR]', sarvamRes.status, await sarvamRes.text());
-          }
-        } catch (sarvamErr: any) {
-          console.error('[SARVAM STT EXCEPTION]', sarvamErr.message);
         }
       }
 
