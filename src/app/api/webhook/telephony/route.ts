@@ -47,7 +47,7 @@ export async function POST(req: Request) {
         .from('employees')
         .select('*')
         .eq('status', 'available')
-        .order('active_cases', { ascending: true })
+        .order('active_caseload', { ascending: true })
         .limit(1);
 
       if (employees && employees.length > 0) {
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
       if (assignedEmpId && employees && employees.length > 0) {
         await supabase
           .from('employees')
-          .update({ active_cases: employees[0].active_cases + 1 })
+          .update({ active_caseload: employees[0].active_caseload + 1 })
           .eq('id', assignedEmpId);
       }
     }
