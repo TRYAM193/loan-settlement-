@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import OpenAI, { toFile } from 'openai';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://asednemwscdtetqwwuts.supabase.co';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_abUml6si1hpQxE-H2K1NNA_TxdSXSVm';
 const supabase = createClient(supabaseUrl, supabaseKey);
-
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,7 +16,7 @@ export async function POST(req: NextRequest) {
     console.log(`[VERCEL INGESTION] Processing call from ${callerPhone} (Duration: ${duration}s)`);
 
     let recordingUrl: string | null = null;
-    let rawTranscript = "Audio transcript processing skipped or unavailable.";
+    let rawTranscript = "Audio recorded. Transcription skipped.";
     let aiExtraction = {
       lenders: ["Unassigned Debt"],
       total_debt: 0,
@@ -27,6 +24,8 @@ export async function POST(req: NextRequest) {
       harassment_reported: false,
       summary_bullets: ["Inbound call ingested via Android app."]
     };
+
+    const apiKey = process.env.OPENAI_API_KEY;
 
     // 1. Upload audio file to Supabase Storage ('call-recordings')
     if (audioFile && audioFile.size > 0) {
@@ -50,25 +49,42 @@ export async function POST(req: NextRequest) {
         console.warn('[STORAGE WARNING]', storageErr.message);
       }
 
-      // 2. OpenAI Whisper STT Transcription using official OpenAI `toFile` utility
-      if (openai) {
+      // 2. Direct Web-Native OpenAI Whisper STT API Call
+      if (apiKey) {
         try {
-          console.log('[OPENAI STT] Transcribing via toFile utility...');
-          const tempFile = await toFile(buffer, 'audio.m4a', { type: 'audio/m4a' });
-          const sttRes = await openai.audio.transcriptions.create({
-            file: tempFile,
-            model: 'whisper-1',
-            language: 'en'
-          });
-          rawTranscript = sttRes.text;
+          console.log('[OPENAI STT] Dispatching native HTTP fetch to OpenAI Whisper API...');
+          const whisperForm = new FormData();
+          const blob = new Blob([buffer], { type: audioFile.type || 'audio/m4a' });
+          whisperForm.append('file', blob, 'recording.m4a');
+          whisperForm.append('model', 'whisper-1');
 
-          // 3. GPT-4o-mini Extraction Engine
-          const llmRes = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [
-              {
-                role: 'system',
-                content: `You are an expert financial analyst for a debt settlement agency.
+          const sttFetchRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: whisperForm
+          });
+
+          if (sttFetchRes.ok) {
+            const sttJson = await sttFetchRes.json() as { text: string };
+            rawTranscript = sttJson.text;
+            console.log('[OPENAI WHISPER TRANSCRIPT SUCCESS]:', rawTranscript);
+
+            // 3. Direct GPT-4o-mini Extraction Call
+            try {
+              const gptFetchRes = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${apiKey}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  model: 'gpt-4o-mini',
+                  messages: [
+                    {
+                      role: 'system',
+                      content: `You are an expert financial analyst for a debt settlement agency.
 Analyze the call transcript and extract structured data strictly in valid JSON format.
 JSON Schema:
 {
@@ -79,19 +95,32 @@ JSON Schema:
   "harassment_reported": boolean,
   "summary_bullets": ["string"]
 }`
-              },
-              {
-                role: 'user',
-                content: `Call Transcript:\n"${rawTranscript}"`
-              }
-            ],
-            response_format: { type: 'json_object' }
-          });
+                    },
+                    {
+                      role: 'user',
+                      content: `Call Transcript:\n"${rawTranscript}"`
+                    }
+                  ],
+                  response_format: { type: 'json_object' }
+                })
+              });
 
-          aiExtraction = JSON.parse(llmRes.choices[0].message.content || '{}');
+              if (gptFetchRes.ok) {
+                const gptJson = await gptFetchRes.json() as any;
+                aiExtraction = JSON.parse(gptJson.choices[0].message.content || '{}');
+              }
+            } catch (gptErr) {
+              console.warn('[GPT EXTRACTION WARN]', gptErr);
+            }
+
+          } else {
+            const errText = await sttFetchRes.text();
+            console.error('[OPENAI STT API ERROR]', sttFetchRes.status, errText);
+            rawTranscript = `Audio recorded. Whisper API status ${sttFetchRes.status}`;
+          }
         } catch (openaiErr: any) {
-          console.error('[OPENAI STT ERROR]', openaiErr.message);
-          rawTranscript = `Audio recorded. Transcription unavailable (${openaiErr.message})`;
+          console.error('[OPENAI STT FETCH EXCEPTION]', openaiErr.message);
+          rawTranscript = `Audio recorded. STT exception: ${openaiErr.message}`;
         }
       }
     }
