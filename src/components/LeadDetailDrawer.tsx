@@ -1,9 +1,29 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, FileText, Send, ShieldAlert, Check, Copy, User, Phone, Mail, Building, MessageSquare, RefreshCw } from 'lucide-react';
+import {
+  X,
+  FileText,
+  Send,
+  ShieldAlert,
+  Check,
+  Copy,
+  User,
+  Phone,
+  Mail,
+  Building,
+  MessageSquare,
+  RefreshCw,
+  UserCheck,
+  ExternalLink,
+} from 'lucide-react';
 import { Lead, Employee } from '../lib/types';
-import { generateEmployeeNotificationText, getWhatsAppClickUrl } from '../lib/whatsappService';
+import {
+  generateEmployeeNotificationText,
+  generateClientNotificationText,
+  getWhatsAppClickUrl,
+  getEmailClickUrl,
+} from '../lib/whatsappService';
 
 interface LeadDetailDrawerProps {
   lead: Lead | null;
@@ -12,9 +32,15 @@ interface LeadDetailDrawerProps {
   onRefreshData?: () => void;
 }
 
-export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({ lead, onClose, employees, onRefreshData }) => {
+export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
+  lead,
+  onClose,
+  employees,
+  onRefreshData,
+}) => {
   const [copiedNotice, setCopiedNotice] = useState(false);
-  const [copiedWhatsAppText, setCopiedWhatsAppText] = useState(false);
+  const [copiedEmpText, setCopiedEmpText] = useState(false);
+  const [copiedClientText, setCopiedClientText] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [selectedEmpId, setSelectedEmpId] = useState<string>('');
   const [notificationStatus, setNotificationStatus] = useState<string | null>(null);
@@ -24,22 +50,14 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({ lead, onClos
   const currentEmpId = selectedEmpId || lead.assignedEmployeeId;
   const assignedEmp = employees.find((e) => e.id === currentEmpId);
 
-  const legalNoticeText = `FORMAL LEGAL REPRESENTATION & CEASE-AND-DESIST NOTICE
+  // Determine Client Channel Preference
+  const clientSource = (lead.source || 'inbound_call').toLowerCase();
+  const isEmailChannel = clientSource === 'email' && lead.email && lead.email.includes('@');
+  const clientChannelUsed: 'whatsapp' | 'email' = isEmailChannel ? 'email' : 'whatsapp';
 
-To: Legal & Recovery Department, All Listed Lenders
-Subject: Client Representation & Prohibition of Workplace Harassment
-Client Name: ${lead.fullName}
-Total Debt Case ID: ${lead.id}
-
-Notice is hereby served under RBI Guidelines on Fair Practices Code for Lenders (RBI/2015-16/160):
-1. Client ${lead.fullName} has formally retained TRYAM Automation Debt Settlement Agency to negotiate and restructure credit liabilities totaling ₹${lead.totalDebtAmount.toLocaleString('en-IN')}.
-2. Direct workplace contacting or harassment by third-party recovery personnel violates client privacy and employment security. All future communications regarding debt settlement MUST be directed strictly to assigned specialist ${assignedEmp ? assignedEmp.name : 'TRYAM Team'} (${assignedEmp ? assignedEmp.email : 'legal@tryam.ai'}).
-3. Requesting formal statement of account and target settlement waiver proposal within 7 working days.
-
-Issued by TRYAM Enterprise Debt Hub`;
-
-  const employeeNotificationMessage = generateEmployeeNotificationText(
-    assignedEmp ? assignedEmp.name : 'Team Agent',
+  // Format Messages
+  const employeeAlertMessage = generateEmployeeNotificationText(
+    assignedEmp ? assignedEmp.name : 'Team Specialist',
     {
       fullName: lead.fullName,
       phone: lead.phone,
@@ -49,8 +67,48 @@ Issued by TRYAM Enterprise Debt Hub`;
     }
   );
 
-  const whatsappUrl = assignedEmp?.phone
-    ? getWhatsAppClickUrl(assignedEmp.phone, employeeNotificationMessage)
+  const clientNotificationMessage = generateClientNotificationText(
+    lead.fullName,
+    {
+      name: assignedEmp ? assignedEmp.name : 'Unassigned Specialist',
+      phone: assignedEmp ? assignedEmp.phone : '+91 98765 43210',
+      email: assignedEmp ? assignedEmp.email : 'support@tryam.ai',
+    }
+  );
+
+  const legalNoticeText = `FORMAL LEGAL REPRESENTATION & CEASE-AND-DESIST NOTICE
+
+To: Legal & Recovery Department, All Listed Lenders
+Subject: Client Representation & Prohibition of Workplace Harassment
+Client Name: ${lead.fullName}
+Total Debt Case ID: ${lead.id}
+
+Notice is hereby served under RBI Guidelines on Fair Practices Code for Lenders (RBI/2015-16/160):
+1. Client ${lead.fullName} has formally retained TRYAM Automation Debt Settlement Agency to negotiate and restructure credit liabilities totaling ₹${lead.totalDebtAmount.toLocaleString(
+    'en-IN'
+  )}.
+2. Direct workplace contacting or harassment by third-party recovery personnel violates client privacy and employment security. All future communications regarding debt settlement MUST be directed strictly to assigned specialist ${
+    assignedEmp ? assignedEmp.name : 'TRYAM Team'
+  } (${assignedEmp ? assignedEmp.email : 'legal@tryam.ai'}).
+3. Requesting formal statement of account and target settlement waiver proposal within 7 working days.
+
+Issued by TRYAM Enterprise Debt Hub`;
+
+  // Action URLs
+  const empWhatsAppUrl = assignedEmp?.phone
+    ? getWhatsAppClickUrl(assignedEmp.phone, employeeAlertMessage)
+    : '#';
+
+  const clientWhatsAppUrl = lead.phone
+    ? getWhatsAppClickUrl(lead.phone, clientNotificationMessage)
+    : '#';
+
+  const clientEmailUrl = lead.email
+    ? getEmailClickUrl(
+        lead.email,
+        `Your TRYAM Loan Settlement Specialist: ${assignedEmp?.name || 'Assigned Agent'}`,
+        clientNotificationMessage
+      )
     : '#';
 
   const copyToClipboard = (text: string, setCopied: (v: boolean) => void) => {
@@ -59,8 +117,10 @@ Issued by TRYAM Enterprise Debt Hub`;
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleReassignEmployee = async (newEmpId: string) => {
-    if (!newEmpId || newEmpId === lead.assignedEmployeeId) return;
+  const handleAdminApproveAndAssign = async (targetEmpId: string) => {
+    const empToUse = targetEmpId || currentEmpId;
+    if (!empToUse) return;
+
     setIsAssigning(true);
     setNotificationStatus(null);
 
@@ -68,19 +128,27 @@ Issued by TRYAM Enterprise Debt Hub`;
       const res = await fetch('/api/leads/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leadId: lead.id, employeeId: newEmpId }),
+        body: JSON.stringify({
+          leadId: lead.id,
+          employeeId: empToUse,
+          adminApproved: true,
+        }),
       });
       const json = await res.json();
 
       if (json.success) {
-        setSelectedEmpId(newEmpId);
-        setNotificationStatus(`Assigned to ${json.data.employee.name}. WhatsApp alert dispatched!`);
+        setSelectedEmpId(empToUse);
+        const empName = json.data.employee.name;
+        const channel = json.data.clientNotificationResult.channelUsed.toUpperCase();
+        setNotificationStatus(
+          `✅ Admin Approved! Assigned to ${empName}. Client notified via ${channel} & Employee alerted via WhatsApp!`
+        );
         if (onRefreshData) onRefreshData();
       } else {
         setNotificationStatus(`Error: ${json.error}`);
       }
     } catch (err: any) {
-      setNotificationStatus(`Failed to reassign: ${err.message}`);
+      setNotificationStatus(`Failed to assign: ${err.message}`);
     } finally {
       setIsAssigning(false);
     }
@@ -102,7 +170,7 @@ Issued by TRYAM Enterprise Debt Hub`;
         className="animate-fade-in"
         style={{
           width: '100%',
-          maxWidth: '620px',
+          maxWidth: '640px',
           height: '100%',
           background: '#0e0f17',
           borderLeft: '1px solid var(--border-subtle)',
@@ -114,7 +182,23 @@ Issued by TRYAM Enterprise Debt Hub`;
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
           <div>
-            <span className={`badge-status ${lead.status}`}>{lead.status.replace('_', ' ')}</span>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <span className={`badge-status ${lead.status}`}>{lead.status.replace('_', ' ')}</span>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  background: isEmailChannel ? 'rgba(56, 189, 248, 0.15)' : 'rgba(52, 211, 153, 0.15)',
+                  color: isEmailChannel ? '#38bdf8' : '#34d399',
+                  border: isEmailChannel ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid rgba(52, 211, 153, 0.3)',
+                }}
+              >
+                Channel: {clientChannelUsed.toUpperCase()}
+              </span>
+            </div>
             <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#fff', marginTop: '8px' }}>
               {lead.fullName}
             </h2>
@@ -202,12 +286,15 @@ Issued by TRYAM Enterprise Debt Hub`;
           </div>
         </div>
 
-        {/* Assigned Rep & Reassignment Dropdown */}
-        <div className="glass-card" style={{ padding: '20px', marginBottom: '24px' }}>
+        {/* Admin Reassignment & Approval Control */}
+        <div className="glass-card" style={{ padding: '20px', marginBottom: '24px', border: '1px solid rgba(99, 102, 241, 0.4)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              Assigned Employee & Caseload
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <UserCheck size={18} color="#818cf8" />
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#a5b4fc' }}>
+                Admin Workload & Employee Reassignment Control
+              </span>
+            </div>
             {isAssigning && <RefreshCw size={14} className="spin" color="#6366f1" />}
           </div>
 
@@ -233,76 +320,100 @@ Issued by TRYAM Enterprise Debt Hub`;
                 {assignedEmp ? assignedEmp.name : 'Unassigned Employee'}
               </h4>
               <p style={{ fontSize: '12px', color: '#a5b4fc' }}>
-                {assignedEmp ? `${assignedEmp.phone} • ${assignedEmp.email}` : 'Assign an employee to start handling'}
+                {assignedEmp ? `${assignedEmp.phone} • ${assignedEmp.email}` : 'Select a specialist below to assign'}
               </p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <select
-              value={currentEmpId}
-              onChange={(e) => handleReassignEmployee(e.target.value)}
-              disabled={isAssigning}
-              className="apple-input"
-              style={{ flex: 1, padding: '8px 12px', fontSize: '13px', borderRadius: '10px' }}
-            >
-              <option value="">Select Employee to Assign...</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.name} ({emp.activeCases} active cases)
-                </option>
-              ))}
-            </select>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>
+              Change / Assign Employee Specialist:
+            </label>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <select
+                value={currentEmpId}
+                onChange={(e) => setSelectedEmpId(e.target.value)}
+                disabled={isAssigning}
+                className="apple-input"
+                style={{ flex: 1, padding: '10px 12px', fontSize: '13px', borderRadius: '10px', background: '#161927', color: '#fff' }}
+              >
+                <option value="">Select Employee to Assign...</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name} ({emp.role.replace('_', ' ')}) - {emp.activeCases} active cases
+                  </option>
+                ))}
+              </select>
+
+              <button
+                onClick={() => handleAdminApproveAndAssign(selectedEmpId || currentEmpId)}
+                disabled={isAssigning || !currentEmpId}
+                className="btn-apple-primary"
+                style={{ padding: '10px 16px', fontSize: '12px', whiteSpace: 'nowrap', borderRadius: '10px', background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
+              >
+                <Check size={14} />
+                <span>Approve & Notify Client</span>
+              </button>
+            </div>
           </div>
 
           {notificationStatus && (
-            <p style={{ fontSize: '12px', color: '#34d399', marginTop: '10px', fontWeight: 500 }}>
+            <p style={{ fontSize: '12px', color: '#34d399', marginTop: '12px', fontWeight: 500 }}>
               {notificationStatus}
             </p>
           )}
         </div>
 
-        {/* WhatsApp Notification Alert Card (Sent TO Employee) */}
-        <div className="glass-card" style={{ padding: '20px', marginBottom: '24px', border: '1px solid rgba(52, 211, 153, 0.3)' }}>
+        {/* CHANNEL-AWARE CLIENT NOTIFICATION CARD (Sent TO THE CLIENT) */}
+        <div className="glass-card" style={{ padding: '20px', marginBottom: '24px', border: isEmailChannel ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid rgba(52, 211, 153, 0.4)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MessageSquare size={18} color="#34d399" />
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#34d399' }}>
-                WhatsApp Employee Alert Preview
+              <MessageSquare size={18} color={isEmailChannel ? '#38bdf8' : '#34d399'} />
+              <span style={{ fontSize: '13px', fontWeight: 700, color: isEmailChannel ? '#38bdf8' : '#34d399' }}>
+                Client Notification ({clientChannelUsed.toUpperCase()}) — Specialist Details Sent
               </span>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
-                onClick={() => copyToClipboard(employeeNotificationMessage, setCopiedWhatsAppText)}
+                onClick={() => copyToClipboard(clientNotificationMessage, setCopiedClientText)}
                 className="btn-apple-secondary"
                 style={{ padding: '6px 12px', fontSize: '11px' }}
               >
-                {copiedWhatsAppText ? <Check size={13} color="#34d399" /> : <Copy size={13} />}
-                <span>{copiedWhatsAppText ? 'Copied' : 'Copy Text'}</span>
+                {copiedClientText ? <Check size={13} color="#34d399" /> : <Copy size={13} />}
+                <span>{copiedClientText ? 'Copied' : 'Copy Text'}</span>
               </button>
-              {assignedEmp?.phone && (
+
+              {isEmailChannel ? (
                 <a
-                  href={whatsappUrl}
+                  href={clientEmailUrl}
+                  className="btn-apple-primary"
+                  style={{ padding: '6px 12px', fontSize: '11px', textDecoration: 'none', background: '#0284c7', color: '#fff' }}
+                >
+                  <Mail size={13} />
+                  <span>Send Client Email</span>
+                </a>
+              ) : (
+                <a
+                  href={clientWhatsAppUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="btn-apple-primary"
                   style={{ padding: '6px 12px', fontSize: '11px', textDecoration: 'none', background: '#059669', color: '#fff' }}
                 >
                   <Send size={13} />
-                  <span>Open WhatsApp</span>
+                  <span>Open Client WhatsApp</span>
                 </a>
               )}
             </div>
           </div>
           <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-            This WhatsApp alert with client details (Name, Phone, Email, Debt) is automatically sent to{' '}
-            <strong>{assignedEmp ? assignedEmp.name : 'the assigned employee'}</strong> ({assignedEmp ? assignedEmp.phone : 'N/A'}).
+            This message with the representative's details (Name: <strong>{assignedEmp?.name}</strong>, Phone: <strong>{assignedEmp?.phone}</strong>, Email: <strong>{assignedEmp?.email}</strong>) is sent to the client via <strong>{clientChannelUsed.toUpperCase()}</strong>.
           </p>
           <pre
             style={{
               fontFamily: 'var(--font-mono)',
               fontSize: '11px',
-              color: '#a7f3d0',
+              color: isEmailChannel ? '#bae6fd' : '#a7f3d0',
               background: 'rgba(0, 0, 0, 0.4)',
               padding: '12px',
               borderRadius: '10px',
@@ -310,7 +421,55 @@ Issued by TRYAM Enterprise Debt Hub`;
               lineHeight: '1.5',
             }}
           >
-            {employeeNotificationMessage}
+            {clientNotificationMessage}
+          </pre>
+        </div>
+
+        {/* WhatsApp Notification Alert Card (Sent TO THE EMPLOYEE) */}
+        <div className="glass-card" style={{ padding: '20px', marginBottom: '24px', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <MessageSquare size={18} color="#fbbf24" />
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#fbbf24' }}>
+                Employee Assignment Alert (Sent to Specialist)
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => copyToClipboard(employeeAlertMessage, setCopiedEmpText)}
+                className="btn-apple-secondary"
+                style={{ padding: '6px 12px', fontSize: '11px' }}
+              >
+                {copiedEmpText ? <Check size={13} color="#34d399" /> : <Copy size={13} />}
+                <span>{copiedEmpText ? 'Copied' : 'Copy Text'}</span>
+              </button>
+              {assignedEmp?.phone && (
+                <a
+                  href={empWhatsAppUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-apple-primary"
+                  style={{ padding: '6px 12px', fontSize: '11px', textDecoration: 'none', background: '#d97706', color: '#fff' }}
+                >
+                  <Send size={13} />
+                  <span>Notify Specialist</span>
+                </a>
+              )}
+            </div>
+          </div>
+          <pre
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '11px',
+              color: '#fef3c7',
+              background: 'rgba(0, 0, 0, 0.4)',
+              padding: '12px',
+              borderRadius: '10px',
+              whiteSpace: 'pre-wrap',
+              lineHeight: '1.5',
+            }}
+          >
+            {employeeAlertMessage}
           </pre>
         </div>
 

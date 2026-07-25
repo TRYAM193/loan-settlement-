@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { sendNewLeadAssignmentWhatsAppToEmployee } from '@/lib/whatsappService';
+import {
+  sendNewLeadAssignmentWhatsAppToEmployee,
+  sendClientAssignmentNotification,
+} from '@/lib/whatsappService';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { leadId, employeeId } = body;
+    const { leadId, employeeId, adminApproved = true } = body;
 
     if (!leadId || !employeeId) {
       return NextResponse.json(
@@ -44,12 +47,14 @@ export async function POST(req: Request) {
 
     const previousEmployeeId = lead.assigned_employee_id;
 
-    // 3. Update Lead Assignment
+    // 3. Update Lead Assignment Status
+    const newStatus = adminApproved ? 'assigned' : 'in_progress';
     const { data: updatedLead, error: updateLeadErr } = await supabase
       .from('leads')
       .update({
         assigned_employee_id: employeeId,
-        status: 'assigned',
+        status: newStatus,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', leadId)
       .select()
@@ -63,7 +68,6 @@ export async function POST(req: Request) {
     }
 
     // 4. Update Caseload Counts
-    // Decrement previous employee caseload if assigned
     if (previousEmployeeId && previousEmployeeId !== employeeId) {
       const { data: prevEmp } = await supabase
         .from('employees')
@@ -78,14 +82,13 @@ export async function POST(req: Request) {
       }
     }
 
-    // Increment new employee caseload
     await supabase
       .from('employees')
       .update({ active_caseload: (newEmployee.active_caseload || 0) + 1 })
       .eq('id', employeeId);
 
-    // 5. Dispatch WhatsApp notification to the assigned employee
-    const whatsappResult = await sendNewLeadAssignmentWhatsAppToEmployee({
+    // 5. Dispatch WhatsApp notification to the Assigned Employee
+    const employeeAlertResult = await sendNewLeadAssignmentWhatsAppToEmployee({
       employee: {
         id: newEmployee.id,
         name: newEmployee.name || 'Agent',
@@ -102,13 +105,32 @@ export async function POST(req: Request) {
       },
     });
 
+    // 6. CHANNEL-AWARE DISPATCH: Send Assigned Employee details (Name, Phone, Email) TO THE CLIENT
+    const clientNotificationResult = await sendClientAssignmentNotification({
+      employee: {
+        id: newEmployee.id,
+        name: newEmployee.name || 'Agent',
+        phone: newEmployee.phone || '+919876543210',
+        email: newEmployee.email || 'support@tryam.ai',
+      },
+      lead: {
+        id: updatedLead.id,
+        fullName: updatedLead.full_name || 'Client',
+        phone: updatedLead.phone,
+        email: updatedLead.email || '',
+        totalDebtAmount: Number(updatedLead.total_debt_amount || 0),
+        source: updatedLead.source || 'inbound_call',
+      },
+    });
+
     return NextResponse.json({
       success: true,
-      message: `Lead successfully assigned to ${newEmployee.name}. WhatsApp alert sent.`,
+      message: `Lead assigned to ${newEmployee.name}. Employee alert & Client (${clientNotificationResult.channelUsed.toUpperCase()}) notification dispatched.`,
       data: {
         lead: updatedLead,
         employee: newEmployee,
-        whatsappResult,
+        employeeAlertResult,
+        clientNotificationResult,
       },
     });
   } catch (err: any) {

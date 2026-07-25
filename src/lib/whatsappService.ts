@@ -52,7 +52,27 @@ Please contact this client as soon as possible to review their settlement case.`
 }
 
 /**
- * Generates direct native WhatsApp links (wa.me & api.whatsapp.com) using your own phone numbers
+ * Format the exact notification text sent TO THE CLIENT containing employee details (Name, Phone, Email)
+ */
+export function generateClientNotificationText(
+  clientName: string,
+  employee: WhatsAppNotificationPayload['employee']
+): string {
+  return `👋 *WELCOME TO TRYAM AUTOMATION LOAN SETTLEMENT*
+
+Dear ${clientName},
+
+Your debt settlement case has been officially assigned to your dedicated Specialist:
+
+👤 *Specialist Name:* ${employee.name}
+📞 *Specialist Phone:* ${employee.phone}
+✉️ *Specialist Email:* ${employee.email || 'support@tryam.ai'}
+
+Your representative will reach out to you shortly to review your debt settlement options and lender negotiations.`;
+}
+
+/**
+ * Generates direct native WhatsApp links (wa.me & api.whatsapp.com) using recipient phone numbers
  */
 export function getWhatsAppClickUrl(phone: string, text: string): string {
   const cleanPhone = formatPhoneForWhatsApp(phone).replace('+', '');
@@ -60,8 +80,14 @@ export function getWhatsAppClickUrl(phone: string, text: string): string {
 }
 
 /**
- * Dispatches WhatsApp notification directly via Meta WhatsApp Cloud API (or Direct Deep-linking)
- * and logs entry in Supabase lead_logs.
+ * Generates direct mailto: link for email clients
+ */
+export function getEmailClickUrl(email: string, subject: string, body: string): string {
+  return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+/**
+ * Dispatches WhatsApp notification to employee and logs entry in Supabase lead_logs.
  */
 export async function sendNewLeadAssignmentWhatsAppToEmployee(
   payload: WhatsAppNotificationPayload
@@ -70,12 +96,11 @@ export async function sendNewLeadAssignmentWhatsAppToEmployee(
   const messageText = generateEmployeeNotificationText(employee.name, lead);
   const whatsappUrl = getWhatsAppClickUrl(employee.phone, messageText);
 
-  console.log(`[WhatsApp Direct Dispatcher] Alert generated for ${employee.name} (${employee.phone}):\n${messageText}`);
+  console.log(`[WhatsApp Employee Dispatcher] Alert generated for ${employee.name} (${employee.phone}):\n${messageText}`);
 
   try {
     let externalStatus = 'Direct WhatsApp Link & Local Audit Dispatched';
 
-    // Check if Meta WhatsApp Cloud API credentials exist (using your own Meta/WhatsApp Business number)
     const metaPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
     const metaAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
 
@@ -113,7 +138,6 @@ export async function sendNewLeadAssignmentWhatsAppToEmployee(
       }
     }
 
-    // Log entry into Supabase lead_logs for full audit trail
     if (lead.id) {
       await supabase.from('lead_logs').insert([
         {
@@ -140,4 +164,99 @@ export async function sendNewLeadAssignmentWhatsAppToEmployee(
       whatsappUrl,
     };
   }
+}
+
+/**
+ * CHANNEL-AWARE CLIENT NOTIFICATION DISPATCHER
+ * Automatically selects WhatsApp or Email based on lead source channel
+ * and sends assigned employee details (Name, Phone, Email) to the client.
+ */
+export async function sendClientAssignmentNotification(
+  payload: WhatsAppNotificationPayload
+): Promise<{
+  success: boolean;
+  channelUsed: 'whatsapp' | 'email';
+  messageText: string;
+  actionUrl: string;
+  statusMessage: string;
+}> {
+  const { employee, lead } = payload;
+  const sourceChannel = (lead.source || 'inbound_call').toLowerCase();
+  const isEmailChannel = sourceChannel === 'email' && lead.email && lead.email.includes('@');
+
+  const channelUsed: 'whatsapp' | 'email' = isEmailChannel ? 'email' : 'whatsapp';
+  const messageText = generateClientNotificationText(lead.fullName, employee);
+
+  let actionUrl = '';
+  let statusMessage = '';
+
+  if (channelUsed === 'email') {
+    const subject = `Your TRYAM Loan Settlement Specialist: ${employee.name}`;
+    actionUrl = getEmailClickUrl(lead.email || '', subject, messageText);
+    statusMessage = `Client Email notification prepared for ${lead.email}`;
+    console.log(`[Client Email Dispatcher] Preparing email for ${lead.email}:\n${messageText}`);
+  } else {
+    actionUrl = getWhatsAppClickUrl(lead.phone, messageText);
+    statusMessage = `Client WhatsApp notification prepared for ${lead.phone}`;
+    console.log(`[Client WhatsApp Dispatcher] Preparing WhatsApp for ${lead.phone}:\n${messageText}`);
+
+    // Try Meta WhatsApp API if credentials exist
+    const metaPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    const metaAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+
+    if (metaPhoneId && metaAccessToken) {
+      try {
+        const cleanRecipientPhone = formatPhoneForWhatsApp(lead.phone).replace('+', '');
+        const res = await fetch(
+          `https://graph.facebook.com/v18.0/${metaPhoneId}/messages`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${metaAccessToken}`,
+            },
+            body: JSON.stringify({
+              messaging_product: 'whatsapp',
+              recipient_type: 'individual',
+              to: cleanRecipientPhone,
+              type: 'text',
+              text: { body: messageText },
+            }),
+          }
+        );
+
+        if (res.ok) {
+          statusMessage = `Delivered to client via Meta WhatsApp Cloud API (${lead.phone})`;
+        }
+      } catch (e: any) {
+        console.warn('[Meta WhatsApp Client Exception]', e.message);
+      }
+    }
+  }
+
+  // Audit log in Supabase lead_logs
+  if (lead.id) {
+    try {
+      await supabase.from('lead_logs').insert([
+        {
+          lead_id: lead.id,
+          employee_id: employee.id || null,
+          channel: channelUsed,
+          ai_summary: `Channel-aware client notification dispatched via ${channelUsed.toUpperCase()}. Employee details (${employee.name}, ${employee.phone}, ${employee.email}) sent to client.`,
+          raw_transcript: messageText,
+          sentiment: 'ClientNotified',
+        },
+      ]);
+    } catch (dbErr) {
+      console.warn('[Supabase Log Warning]', dbErr);
+    }
+  }
+
+  return {
+    success: true,
+    channelUsed,
+    messageText,
+    actionUrl,
+    statusMessage,
+  };
 }
