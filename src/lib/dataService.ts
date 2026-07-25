@@ -11,10 +11,11 @@ export async function fetchEmployees(): Promise<Employee[]> {
       .from('employees')
       .select('*');
 
-    if (error || !data || data.length === 0) {
-      console.warn('Using fallback initial employees (Supabase error or empty table):', error?.message);
-      return INITIAL_EMPLOYEES;
+    if (error) {
+      console.warn('Supabase error fetching employees:', error.message);
+      return [];
     }
+    if (!data) return [];
 
     return data.map((emp: any) => ({
       id: emp.id,
@@ -31,7 +32,7 @@ export async function fetchEmployees(): Promise<Employee[]> {
     }));
   } catch (err) {
     console.error('Error fetching employees from Supabase:', err);
-    return INITIAL_EMPLOYEES;
+    return [];
   }
 }
 
@@ -44,10 +45,11 @@ export async function fetchLeads(): Promise<Lead[]> {
       .from('leads')
       .select('*, employees(id, name)');
 
-    if (error || !data || data.length === 0) {
-      console.warn('Using fallback initial leads (Supabase error or empty table):', error?.message);
-      return INITIAL_LEADS;
+    if (error) {
+      console.warn('Supabase error fetching leads:', error.message);
+      return [];
     }
+    if (!data) return [];
 
     return data.map((lead: any) => ({
       id: lead.id,
@@ -67,7 +69,7 @@ export async function fetchLeads(): Promise<Lead[]> {
     }));
   } catch (err) {
     console.error('Error fetching leads from Supabase:', err);
-    return INITIAL_LEADS;
+    return [];
   }
 }
 
@@ -80,9 +82,11 @@ export async function fetchSettlements(): Promise<Settlement[]> {
       .from('settlements')
       .select('*, leads(full_name)');
 
-    if (error || !data || data.length === 0) {
-      return INITIAL_SETTLEMENTS;
+    if (error) {
+      console.warn('Supabase error fetching settlements:', error.message);
+      return [];
     }
+    if (!data) return [];
 
     return data.map((s: any) => ({
       id: s.id,
@@ -97,6 +101,6 @@ export async function fetchSettlements(): Promise<Settlement[]> {
     }));
   } catch (err) {
     console.error('Error fetching settlements from Supabase:', err);
-    return INITIAL_SETTLEMENTS;
+    return [];
   }
 }

@@ -10,15 +10,15 @@ import { LeadDetailDrawer } from '../components/LeadDetailDrawer';
 import { AuthModal } from '../components/AuthModal';
 
 import { fetchEmployees, fetchLeads, fetchSettlements } from '../lib/dataService';
-import { INITIAL_LEADS, INITIAL_EMPLOYEES, INITIAL_SETTLEMENTS } from '../lib/store';
+import { INITIAL_LOGS } from '../lib/store';
 import { Lead, Employee, EmployeeStatus, UserSession, Settlement } from '../lib/types';
 import { supabase } from '../lib/supabase';
 import { Users, LayoutGrid, RefreshCw } from 'lucide-react';
 
 export default function Home() {
-  const [leads, setLeads] = useState<Lead[]>(INITIAL_LEADS);
-  const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
-  const [settlements, setSettlements] = useState<Settlement[]>(INITIAL_SETTLEMENTS);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [isLoadingDb, setIsLoadingDb] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'leads' | 'employees'>('leads');
 
