@@ -3,12 +3,10 @@
 import React, { useState } from 'react';
 import {
   X,
-  FileText,
   Send,
   ShieldAlert,
   Check,
   Copy,
-  User,
   Phone,
   Mail,
   Building,
@@ -17,7 +15,6 @@ import {
   UserCheck,
   CheckCircle2,
   Sparkles,
-  PartyPopper,
 } from 'lucide-react';
 import { Lead, Employee } from '../lib/types';
 import {
@@ -98,33 +95,29 @@ Notice is hereby served under RBI Guidelines on Fair Practices Code for Lenders 
 
 Issued by TRYAM Enterprise Debt Hub`;
 
-  // Action URLs
+  const copyToClipboard = (text: string, setFn: (val: boolean) => void) => {
+    navigator.clipboard.writeText(text);
+    setFn(true);
+    setTimeout(() => setFn(false), 2000);
+  };
+
+  const clientWhatsAppUrl = getWhatsAppClickUrl(
+    lead.phone,
+    clientNotificationMessage
+  );
+
+  const clientEmailUrl = getEmailClickUrl(
+    lead.email || '',
+    `TRYAM Settlement Specialist Assigned - ${lead.fullName}`,
+    clientNotificationMessage
+  );
+
   const empWhatsAppUrl = assignedEmp?.phone
     ? getWhatsAppClickUrl(assignedEmp.phone, employeeAlertMessage)
     : '#';
 
-  const clientWhatsAppUrl = lead.phone
-    ? getWhatsAppClickUrl(lead.phone, clientNotificationMessage)
-    : '#';
-
-  const clientEmailUrl = lead.email
-    ? getEmailClickUrl(
-        lead.email,
-        `Your TRYAM Loan Settlement Specialist: ${assignedEmp?.name || 'Assigned Agent'}`,
-        clientNotificationMessage
-      )
-    : '#';
-
-  const copyToClipboard = (text: string, setCopied: (v: boolean) => void) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleAdminApproveAndAssign = async (targetEmpId: string) => {
-    const empToUse = targetEmpId || currentEmpId;
-    if (!empToUse) return;
-
+  const handleAdminApproveAndAssign = async (empIdToAssign: string) => {
+    if (!empIdToAssign) return;
     setIsAssigning(true);
     setNotificationStatus(null);
 
@@ -134,25 +127,22 @@ Issued by TRYAM Enterprise Debt Hub`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           leadId: lead.id,
-          employeeId: empToUse,
+          employeeId: empIdToAssign,
           adminApproved: true,
         }),
       });
       const json = await res.json();
 
       if (json.success) {
-        setSelectedEmpId(empToUse);
-        const empName = json.data.employee.name;
-        const channel = json.data.clientNotificationResult.channelUsed.toUpperCase();
         setNotificationStatus(
-          `✅ Admin Approved! Assigned to ${empName}. Client notified via ${channel} & Employee alerted via WhatsApp!`
+          `✅ Lead assigned to ${json.data.employee.name}. Client (${json.data.clientNotificationResult.channelUsed.toUpperCase()}) & Employee alerts sent.`
         );
         if (onRefreshData) onRefreshData();
       } else {
         setNotificationStatus(`Error: ${json.error}`);
       }
     } catch (err: any) {
-      setNotificationStatus(`Failed to assign: ${err.message}`);
+      setNotificationStatus(`Failed to reassign: ${err.message}`);
     } finally {
       setIsAssigning(false);
     }
@@ -194,8 +184,8 @@ Issued by TRYAM Enterprise Debt Hub`;
         position: 'fixed',
         inset: 0,
         zIndex: 100,
-        background: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(12px)',
+        background: 'rgba(0, 0, 0, 0.4)',
+        backdropFilter: 'blur(10px)',
         display: 'flex',
         justifyContent: 'flex-end',
       }}
@@ -206,11 +196,12 @@ Issued by TRYAM Enterprise Debt Hub`;
           width: '100%',
           maxWidth: '640px',
           height: '100%',
-          background: '#0e0f17',
+          background: 'var(--bg-surface)',
           borderLeft: '1px solid var(--border-subtle)',
           padding: '32px',
           overflowY: 'auto',
-          boxShadow: '-20px 0 50px rgba(0, 0, 0, 0.8)',
+          boxShadow: 'var(--card-shadow)',
+          color: 'var(--text-primary)',
         }}
       >
         {/* Header */}
@@ -221,31 +212,31 @@ Issued by TRYAM Enterprise Debt Hub`;
               <span
                 style={{
                   fontSize: '11px',
-                  fontWeight: 700,
+                  fontWeight: 600,
                   textTransform: 'uppercase',
                   padding: '3px 8px',
                   borderRadius: '6px',
-                  background: isEmailChannel ? 'rgba(56, 189, 248, 0.15)' : 'rgba(52, 211, 153, 0.15)',
-                  color: isEmailChannel ? '#38bdf8' : '#34d399',
-                  border: isEmailChannel ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid rgba(52, 211, 153, 0.3)',
+                  background: 'var(--bg-pill)',
+                  color: 'var(--accent-apple-blue)',
+                  border: '1px solid var(--border-subtle)',
                 }}
               >
                 Channel: {clientChannelUsed.toUpperCase()}
               </span>
             </div>
-            <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#fff', marginTop: '8px' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '8px' }}>
               {lead.fullName}
             </h2>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
               Client Case ID: <span style={{ fontFamily: 'var(--font-mono)' }}>{lead.id}</span>
             </p>
           </div>
           <button
             onClick={onClose}
             style={{
-              background: 'rgba(255, 255, 255, 0.06)',
-              border: 'none',
-              color: 'var(--text-muted)',
+              background: 'var(--bg-pill)',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--text-secondary)',
               width: '36px',
               height: '36px',
               borderRadius: '50%',
@@ -262,8 +253,8 @@ Issued by TRYAM Enterprise Debt Hub`;
         {/* CASE SETTLEMENT COMPLETION ACTION BUTTON */}
         <div
           style={{
-            background: lead.status === 'settled' ? 'rgba(52, 211, 153, 0.12)' : 'rgba(16, 185, 129, 0.08)',
-            border: '1px solid rgba(52, 211, 153, 0.4)',
+            background: lead.status === 'settled' ? 'rgba(52, 199, 89, 0.1)' : 'var(--bg-pill)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: '16px',
             padding: '18px',
             marginBottom: '24px',
@@ -274,9 +265,9 @@ Issued by TRYAM Enterprise Debt Hub`;
         >
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Sparkles size={18} color="#34d399" />
-              <span style={{ fontSize: '14px', fontWeight: 700, color: '#34d399' }}>
-                {lead.status === 'settled' ? '🎉 Client Case Fully Settled (Happy Customer)' : 'Employee Case Completion Control'}
+              <Sparkles size={18} color="var(--accent-apple-blue)" />
+              <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {lead.status === 'settled' ? '🎉 Client Case Fully Settled' : 'Employee Case Completion Control'}
               </span>
             </div>
             <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
@@ -293,10 +284,7 @@ Issued by TRYAM Enterprise Debt Hub`;
             style={{
               padding: '10px 18px',
               fontSize: '12px',
-              background: lead.status === 'settled' ? '#047857' : 'linear-gradient(135deg, #10b981, #059669)',
-              color: '#fff',
               whiteSpace: 'nowrap',
-              borderRadius: '10px',
             }}
           >
             {isSettling ? <RefreshCw size={14} className="spin" /> : <CheckCircle2 size={15} />}
@@ -305,7 +293,7 @@ Issued by TRYAM Enterprise Debt Hub`;
         </div>
 
         {settlementSuccessMessage && (
-          <div style={{ padding: '12px 16px', borderRadius: '12px', background: 'rgba(52, 211, 153, 0.15)', border: '1px solid rgba(52, 211, 153, 0.3)', color: '#a7f3d0', fontSize: '12px', marginBottom: '24px' }}>
+          <div style={{ padding: '12px 16px', borderRadius: '12px', background: 'rgba(52, 199, 89, 0.1)', border: '1px solid rgba(52, 199, 89, 0.3)', color: '#248a3d', fontSize: '12px', marginBottom: '24px' }}>
             {settlementSuccessMessage}
           </div>
         )}
@@ -313,7 +301,7 @@ Issued by TRYAM Enterprise Debt Hub`;
         {/* Contact Info Bar */}
         <div
           style={{
-            background: 'rgba(255, 255, 255, 0.03)',
+            background: 'var(--bg-pill)',
             borderRadius: '14px',
             padding: '16px',
             border: '1px solid var(--border-subtle)',
@@ -324,12 +312,12 @@ Issued by TRYAM Enterprise Debt Hub`;
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-primary)' }}>
-            <Phone size={15} color="#818cf8" />
-            <span>{lead.phone}</span>
+            <Phone size={15} color="var(--accent-apple-blue)" />
+            <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{lead.phone}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-primary)' }}>
-            <Mail size={15} color="#38bdf8" />
-            <span>{lead.email || 'No email provided'}</span>
+            <Mail size={15} color="var(--accent-apple-blue)" />
+            <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{lead.email || 'No email provided'}</span>
           </div>
         </div>
 
@@ -340,7 +328,7 @@ Issued by TRYAM Enterprise Debt Hub`;
           </span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '6px', marginBottom: '16px' }}>
             <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Total Debt Portfolio</span>
-            <span style={{ fontSize: '24px', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#fff' }}>
+            <span style={{ fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
               ₹{lead.totalDebtAmount.toLocaleString('en-IN')}
             </span>
           </div>
@@ -353,17 +341,18 @@ Issued by TRYAM Enterprise Debt Hub`;
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  background: 'rgba(0, 0, 0, 0.25)',
+                  background: 'var(--bg-pill)',
+                  border: '1px solid var(--border-subtle)',
                   padding: '10px 14px',
                   borderRadius: '10px',
                   fontSize: '13px',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Building size={14} color="#a5b4fc" />
-                  <span style={{ color: '#fff', fontWeight: 500 }}>{lender.name}</span>
+                  <Building size={14} color="var(--accent-apple-blue)" />
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{lender.name}</span>
                 </div>
-                <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#f8fafc' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-primary)' }}>
                   ₹{lender.amount.toLocaleString('en-IN')}
                 </span>
               </div>
@@ -372,15 +361,15 @@ Issued by TRYAM Enterprise Debt Hub`;
         </div>
 
         {/* Admin Reassignment & Approval Control */}
-        <div className="glass-card" style={{ padding: '20px', marginBottom: '24px', border: '1px solid rgba(99, 102, 241, 0.4)' }}>
+        <div className="glass-card" style={{ padding: '20px', marginBottom: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <UserCheck size={18} color="#818cf8" />
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#a5b4fc' }}>
+              <UserCheck size={18} color="var(--accent-apple-blue)" />
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
                 Admin Workload & Employee Reassignment Control
               </span>
             </div>
-            {isAssigning && <RefreshCw size={14} className="spin" color="#6366f1" />}
+            {isAssigning && <RefreshCw size={14} className="spin" color="var(--accent-apple-blue)" />}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
@@ -389,7 +378,7 @@ Issued by TRYAM Enterprise Debt Hub`;
                 width: '44px',
                 height: '44px',
                 borderRadius: '50%',
-                background: 'var(--accent-primary-gradient)',
+                background: 'var(--accent-apple-blue)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -401,10 +390,10 @@ Issued by TRYAM Enterprise Debt Hub`;
               {assignedEmp ? assignedEmp.name.charAt(0) : 'U'}
             </div>
             <div style={{ flex: 1 }}>
-              <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#fff' }}>
+              <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
                 {assignedEmp ? assignedEmp.name : 'Unassigned Employee'}
               </h4>
-              <p style={{ fontSize: '12px', color: '#a5b4fc' }}>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                 {assignedEmp ? `${assignedEmp.phone} • ${assignedEmp.email}` : 'Select a specialist below to assign'}
               </p>
             </div>
@@ -419,8 +408,16 @@ Issued by TRYAM Enterprise Debt Hub`;
                 value={currentEmpId}
                 onChange={(e) => setSelectedEmpId(e.target.value)}
                 disabled={isAssigning}
-                className="apple-input"
-                style={{ flex: 1, padding: '10px 12px', fontSize: '13px', borderRadius: '10px', background: '#161927', color: '#fff' }}
+                style={{
+                  flex: 1,
+                  padding: '10px 12px',
+                  fontSize: '13px',
+                  borderRadius: '10px',
+                  background: 'var(--bg-pill)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-subtle)',
+                  outline: 'none',
+                }}
               >
                 <option value="">Select Employee to Assign...</option>
                 {employees.map((emp) => (
@@ -434,7 +431,7 @@ Issued by TRYAM Enterprise Debt Hub`;
                 onClick={() => handleAdminApproveAndAssign(selectedEmpId || currentEmpId)}
                 disabled={isAssigning || !currentEmpId}
                 className="btn-apple-primary"
-                style={{ padding: '10px 16px', fontSize: '12px', whiteSpace: 'nowrap', borderRadius: '10px', background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
+                style={{ padding: '10px 16px', fontSize: '12px', whiteSpace: 'nowrap', borderRadius: '10px' }}
               >
                 <Check size={14} />
                 <span>Approve & Notify Client</span>
@@ -443,18 +440,18 @@ Issued by TRYAM Enterprise Debt Hub`;
           </div>
 
           {notificationStatus && (
-            <p style={{ fontSize: '12px', color: '#34d399', marginTop: '12px', fontWeight: 500 }}>
+            <p style={{ fontSize: '12px', color: '#248a3d', marginTop: '12px', fontWeight: 500 }}>
               {notificationStatus}
             </p>
           )}
         </div>
 
         {/* CHANNEL-AWARE CLIENT NOTIFICATION CARD */}
-        <div className="glass-card" style={{ padding: '20px', marginBottom: '24px', border: isEmailChannel ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid rgba(52, 211, 153, 0.4)' }}>
+        <div className="glass-card" style={{ padding: '20px', marginBottom: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MessageSquare size={18} color={isEmailChannel ? '#38bdf8' : '#34d399'} />
-              <span style={{ fontSize: '13px', fontWeight: 700, color: isEmailChannel ? '#38bdf8' : '#34d399' }}>
+              <MessageSquare size={18} color="var(--accent-apple-blue)" />
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
                 Client Notification ({clientChannelUsed.toUpperCase()}) — Specialist Details Sent
               </span>
             </div>
@@ -464,7 +461,7 @@ Issued by TRYAM Enterprise Debt Hub`;
                 className="btn-apple-secondary"
                 style={{ padding: '6px 12px', fontSize: '11px' }}
               >
-                {copiedClientText ? <Check size={13} color="#34d399" /> : <Copy size={13} />}
+                {copiedClientText ? <Check size={13} color="#248a3d" /> : <Copy size={13} />}
                 <span>{copiedClientText ? 'Copied' : 'Copy Text'}</span>
               </button>
 
@@ -472,7 +469,7 @@ Issued by TRYAM Enterprise Debt Hub`;
                 <a
                   href={clientEmailUrl}
                   className="btn-apple-primary"
-                  style={{ padding: '6px 12px', fontSize: '11px', textDecoration: 'none', background: '#0284c7', color: '#fff' }}
+                  style={{ padding: '6px 12px', fontSize: '11px', textDecoration: 'none' }}
                 >
                   <Mail size={13} />
                   <span>Send Client Email</span>
@@ -483,7 +480,7 @@ Issued by TRYAM Enterprise Debt Hub`;
                   target="_blank"
                   rel="noreferrer"
                   className="btn-apple-primary"
-                  style={{ padding: '6px 12px', fontSize: '11px', textDecoration: 'none', background: '#059669', color: '#fff' }}
+                  style={{ padding: '6px 12px', fontSize: '11px', textDecoration: 'none' }}
                 >
                   <Send size={13} />
                   <span>Open Client WhatsApp</span>
@@ -498,8 +495,9 @@ Issued by TRYAM Enterprise Debt Hub`;
             style={{
               fontFamily: 'var(--font-mono)',
               fontSize: '11px',
-              color: isEmailChannel ? '#bae6fd' : '#a7f3d0',
-              background: 'rgba(0, 0, 0, 0.4)',
+              color: 'var(--text-primary)',
+              background: 'var(--bg-pill)',
+              border: '1px solid var(--border-subtle)',
               padding: '12px',
               borderRadius: '10px',
               whiteSpace: 'pre-wrap',
@@ -511,11 +509,11 @@ Issued by TRYAM Enterprise Debt Hub`;
         </div>
 
         {/* WhatsApp Notification Alert Card (Sent TO THE EMPLOYEE) */}
-        <div className="glass-card" style={{ padding: '20px', marginBottom: '24px', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
+        <div className="glass-card" style={{ padding: '20px', marginBottom: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MessageSquare size={18} color="#fbbf24" />
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#fbbf24' }}>
+              <MessageSquare size={18} color="var(--accent-apple-blue)" />
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
                 Employee Assignment Alert (Sent to Specialist)
               </span>
             </div>
@@ -525,7 +523,7 @@ Issued by TRYAM Enterprise Debt Hub`;
                 className="btn-apple-secondary"
                 style={{ padding: '6px 12px', fontSize: '11px' }}
               >
-                {copiedEmpText ? <Check size={13} color="#34d399" /> : <Copy size={13} />}
+                {copiedEmpText ? <Check size={13} color="#248a3d" /> : <Copy size={13} />}
                 <span>{copiedEmpText ? 'Copied' : 'Copy Text'}</span>
               </button>
               {assignedEmp?.phone && (
@@ -534,7 +532,7 @@ Issued by TRYAM Enterprise Debt Hub`;
                   target="_blank"
                   rel="noreferrer"
                   className="btn-apple-primary"
-                  style={{ padding: '6px 12px', fontSize: '11px', textDecoration: 'none', background: '#d97706', color: '#fff' }}
+                  style={{ padding: '6px 12px', fontSize: '11px', textDecoration: 'none' }}
                 >
                   <Send size={13} />
                   <span>Notify Specialist</span>
@@ -546,8 +544,9 @@ Issued by TRYAM Enterprise Debt Hub`;
             style={{
               fontFamily: 'var(--font-mono)',
               fontSize: '11px',
-              color: '#fef3c7',
-              background: 'rgba(0, 0, 0, 0.4)',
+              color: 'var(--text-primary)',
+              background: 'var(--bg-pill)',
+              border: '1px solid var(--border-subtle)',
               padding: '12px',
               borderRadius: '10px',
               whiteSpace: 'pre-wrap',
@@ -562,16 +561,16 @@ Issued by TRYAM Enterprise Debt Hub`;
         {lead.harassmentReported && (
           <div
             style={{
-              background: 'rgba(244, 63, 94, 0.08)',
-              border: '1px solid rgba(244, 63, 94, 0.3)',
+              background: 'rgba(255, 59, 48, 0.08)',
+              border: '1px solid rgba(255, 59, 48, 0.2)',
               borderRadius: '16px',
               padding: '20px',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <ShieldAlert size={18} color="#f43f5e" />
-                <span style={{ fontSize: '13px', fontWeight: 700, color: '#fda4af' }}>
+                <ShieldAlert size={18} color="#ff3b30" />
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#ff3b30' }}>
                   RBI Anti-Harassment Representation Notice
                 </span>
               </div>
@@ -580,7 +579,7 @@ Issued by TRYAM Enterprise Debt Hub`;
                 className="btn-apple-secondary"
                 style={{ padding: '6px 12px', fontSize: '11px' }}
               >
-                {copiedNotice ? <Check size={13} color="#34d399" /> : <Copy size={13} />}
+                {copiedNotice ? <Check size={13} color="#248a3d" /> : <Copy size={13} />}
                 <span>{copiedNotice ? 'Copied' : 'Copy Notice'}</span>
               </button>
             </div>
@@ -588,8 +587,9 @@ Issued by TRYAM Enterprise Debt Hub`;
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: '11px',
-                color: '#fecdd3',
-                background: 'rgba(0, 0, 0, 0.4)',
+                color: 'var(--text-primary)',
+                background: 'var(--bg-pill)',
+                border: '1px solid var(--border-subtle)',
                 padding: '12px',
                 borderRadius: '10px',
                 whiteSpace: 'pre-wrap',

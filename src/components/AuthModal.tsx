@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, ShieldCheck, Lock, User, ArrowRight, CheckCircle, Briefcase } from 'lucide-react';
-import { Role, UserSession } from '../lib/types';
+import { X, ShieldCheck, ArrowRight, Briefcase } from 'lucide-react';
+import { UserSession } from '../lib/types';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -74,8 +74,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
         position: 'fixed',
         inset: 0,
         zIndex: 100,
-        background: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(16px)',
+        background: 'rgba(0, 0, 0, 0.4)',
+        backdropFilter: 'blur(12px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -88,10 +88,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
           width: '100%',
           maxWidth: '460px',
           padding: '32px',
-          background: 'linear-gradient(180deg, rgba(24, 25, 35, 0.95) 0%, rgba(14, 15, 22, 0.95) 100%)',
+          background: 'var(--bg-surface)',
           borderRadius: '24px',
           position: 'relative',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
+          border: '1px solid var(--border-subtle)',
+          boxShadow: 'var(--card-shadow)',
+          color: 'var(--text-primary)',
         }}
       >
         <button
@@ -100,9 +102,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
             position: 'absolute',
             top: '20px',
             right: '20px',
-            background: 'rgba(255, 255, 255, 0.06)',
-            border: 'none',
-            color: 'var(--text-muted)',
+            background: 'var(--bg-pill)',
+            border: '1px solid var(--border-subtle)',
+            color: 'var(--text-secondary)',
             width: '32px',
             height: '32px',
             borderRadius: '50%',
@@ -119,20 +121,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div
             style={{
-              width: '52px',
-              height: '52px',
-              borderRadius: '16px',
-              background: 'var(--accent-primary-gradient)',
-              margin: '0 auto 14px auto',
+              width: '48px',
+              height: '48px',
+              borderRadius: '14px',
+              background: 'var(--accent-apple-gradient)',
+              margin: '0 auto 12px auto',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 10px 25px rgba(99, 102, 241, 0.4)',
+              boxShadow: '0 4px 15px rgba(0, 113, 227, 0.3)',
             }}
           >
-            <ShieldCheck size={26} color="#fff" />
+            <ShieldCheck size={24} color="#fff" />
           </div>
-          <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.4px', color: '#fff' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.3px', color: 'var(--text-primary)' }}>
             TRYAM Access Portal
           </h2>
           <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
@@ -154,9 +156,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
                 style={{
                   padding: '10px 14px',
                   borderRadius: '12px',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  background: acc.role === 'admin' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                  color: '#fff',
+                  border: '1px solid var(--border-subtle)',
+                  background: 'var(--bg-pill)',
+                  color: 'var(--text-primary)',
                   fontSize: '12px',
                   fontWeight: 500,
                   cursor: 'pointer',
@@ -166,10 +168,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {acc.role === 'admin' ? <ShieldCheck size={15} color="#818cf8" /> : <Briefcase size={15} color="#38bdf8" />}
-                  <span>{acc.name}</span>
+                  {acc.role === 'admin' ? <ShieldCheck size={15} color="var(--accent-apple-blue)" /> : <Briefcase size={15} color="var(--accent-apple-blue)" />}
+                  <span style={{ color: 'var(--text-primary)' }}>{acc.name}</span>
                 </div>
-                <span style={{ fontSize: '10px', color: acc.role === 'admin' ? '#818cf8' : '#38bdf8', fontWeight: 700 }}>
+                <span style={{ fontSize: '10px', color: 'var(--accent-apple-blue)', fontWeight: 700 }}>
                   {acc.role === 'admin' ? 'FULL MASTER' : 'ISOLATED'}
                 </span>
               </button>
@@ -190,11 +192,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
               onChange={(e) => setEmail(e.target.value)}
               style={{
                 width: '100%',
-                background: 'rgba(0, 0, 0, 0.3)',
+                background: 'var(--bg-pill)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: '10px',
                 padding: '9px 12px',
-                color: '#fff',
+                color: 'var(--text-primary)',
                 fontSize: '13px',
                 outline: 'none',
               }}
@@ -211,18 +213,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
               onChange={(e) => setPassword(e.target.value)}
               style={{
                 width: '100%',
-                background: 'rgba(0, 0, 0, 0.3)',
+                background: 'var(--bg-pill)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: '10px',
                 padding: '9px 12px',
-                color: '#fff',
+                color: 'var(--text-primary)',
                 fontSize: '13px',
                 outline: 'none',
               }}
             />
           </div>
 
-          {error && <p style={{ color: '#f43f5e', fontSize: '12px', marginBottom: '10px' }}>{error}</p>}
+          {error && <p style={{ color: '#ff3b30', fontSize: '12px', marginBottom: '10px' }}>{error}</p>}
 
           <button
             type="submit"

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { UserCheck, Shield, Phone, Mail, Award, CheckCircle2, Clock } from 'lucide-react';
+import { UserCheck, Award } from 'lucide-react';
 import { Employee, EmployeeStatus, Lead } from '../lib/types';
 
 interface EmployeesViewProps {
@@ -16,8 +16,8 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ employees, onToggl
       {/* Explanation Banner */}
       <div
         style={{
-          background: 'rgba(99, 102, 241, 0.1)',
-          border: '1px solid rgba(99, 102, 241, 0.3)',
+          background: 'var(--bg-pill)',
+          border: '1px solid var(--border-subtle)',
           borderRadius: '16px',
           padding: '18px 24px',
           marginBottom: '24px',
@@ -29,9 +29,9 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ employees, onToggl
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <UserCheck size={22} color="#818cf8" />
+          <UserCheck size={22} color="var(--accent-apple-blue)" />
           <div>
-            <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#fff' }}>
+            <h4 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
               Workload-Aware Lead Balancing Algorithm
             </h4>
             <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
@@ -41,12 +41,13 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ employees, onToggl
         </div>
         <div
           style={{
-            background: 'rgba(255, 255, 255, 0.06)',
+            background: 'var(--bg-surface)',
             padding: '6px 14px',
             borderRadius: '999px',
             fontSize: '12px',
-            color: '#a5b4fc',
+            color: 'var(--accent-apple-blue)',
             fontWeight: 600,
+            border: '1px solid var(--border-subtle)',
           }}
         >
           {employees.filter((e) => e.status === 'available').length} / {employees.length} Agents Available
@@ -75,17 +76,17 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ employees, onToggl
                     height: '50px',
                     borderRadius: '50%',
                     objectFit: 'cover',
-                    border: '2px solid rgba(255, 255, 255, 0.1)',
+                    border: '2px solid var(--border-subtle)',
                   }}
                 />
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>{emp.name}</h4>
+                    <h4 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>{emp.name}</h4>
                     {emp.role === 'senior_specialist' && (
                       <Award size={14} color="#f59e0b" />
                     )}
                   </div>
-                  <span style={{ fontSize: '12px', color: '#a5b4fc', textTransform: 'capitalize' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
                     {emp.role.replace('_', ' ')}
                   </span>
                 </div>
@@ -95,23 +96,13 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ employees, onToggl
                   value={emp.status}
                   onChange={(e) => onToggleStatus && onToggleStatus(emp.id, e.target.value as EmployeeStatus)}
                   style={{
-                    background:
-                      emp.status === 'available'
-                        ? 'rgba(16, 185, 129, 0.15)'
-                        : emp.status === 'on_call'
-                        ? 'rgba(245, 158, 11, 0.15)'
-                        : 'rgba(244, 63, 94, 0.15)',
-                    color:
-                      emp.status === 'available'
-                        ? '#34d399'
-                        : emp.status === 'on_call'
-                        ? '#fcd34d'
-                        : '#fda4af',
+                    background: 'var(--bg-pill)',
+                    color: 'var(--text-primary)',
                     border: '1px solid var(--border-subtle)',
                     borderRadius: '999px',
                     padding: '4px 10px',
                     fontSize: '11px',
-                    fontWeight: 700,
+                    fontWeight: 600,
                     cursor: 'pointer',
                     outline: 'none',
                   }}
@@ -133,7 +124,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ employees, onToggl
               <div style={{ marginTop: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Current Active Cases</span>
-                  <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#fff' }}>
+                  <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
                     {emp.activeCases} / {emp.maxCapacity} cases
                   </span>
                 </div>
@@ -141,7 +132,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ employees, onToggl
                   style={{
                     width: '100%',
                     height: '8px',
-                    background: 'rgba(255, 255, 255, 0.08)',
+                    background: 'var(--bg-pill)',
                     borderRadius: '999px',
                     overflow: 'hidden',
                   }}
@@ -150,12 +141,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ employees, onToggl
                     style={{
                       width: `${loadPercent}%`,
                       height: '100%',
-                      background:
-                        loadPercent > 80
-                          ? 'var(--accent-rose-gradient)'
-                          : loadPercent > 50
-                          ? 'var(--accent-amber-gradient)'
-                          : 'var(--accent-emerald-gradient)',
+                      background: 'var(--accent-apple-blue)',
                       borderRadius: '999px',
                       transition: 'width 0.4s ease',
                     }}
@@ -176,7 +162,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ employees, onToggl
                 }}
               >
                 <span style={{ color: 'var(--text-muted)' }}>Historical Debt Settled</span>
-                <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#34d399' }}>
+                <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#248a3d' }}>
                   ₹{(emp.totalSettledAmount / 100000).toFixed(1)} Lakhs
                 </span>
               </div>

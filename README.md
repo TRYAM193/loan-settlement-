@@ -7,10 +7,12 @@
 
 ## 🌟 Core Features Implemented
 
-### 0. 🎨 Google / Apple / Amazon-Level Glassmorphic Design System
-* **✨ Apple Dark Glassmorphic Aesthetic (`globals.css`):** Multi-layered glass depth (`backdrop-filter: blur(28px)`), radial ambient lighting blobs, subtle 1px border glows, and 60fps spring transitions (`cubic-bezier(0.16, 1, 0.3, 1)`).
+### 0. 🎨 Apple Light Studio & Space Gray Dynamic Design System
+* **🍎 Apple Light Studio Aesthetics (`globals.css`):** Light Studio neutral background (`#f5f5f7`), pure white card surfaces (`#ffffff`), and restrained Apple Blue accent (`#0071e3`). Fully adaptive to **Space Gray Dark Mode** (`#000000` / `#161617`) with a 1-click theme switcher in the Navbar.
+* **🪐 3D Spatial Antigravity Cards (`AntigravityCard.tsx`):** Physics-driven 3D tilt interaction with real-time mouse specular glare reflections and weightless depth.
+* **🌗 100% Theme-Adaptive Popup Modals & Drawers:** All popups (`LeadDetailDrawer`, `AuthModal`, `EmployeeClientCards`, `IngestLeadModal`, `AdminChatbot`) dynamically adapt backgrounds, headers, and text labels to `var(--bg-surface)` and `var(--text-primary)`, guaranteeing zero unreadable text in both Light and Dark themes.
+* **📊 Harmonized Data Caseload Radar:** Explicitly synchronizes and distinguishes **Active Cases** (`status !== 'settled'`) from **Total Assigned Client History** across the Admin Inspector header, employee dropdown options, and KPI metric cards.
 * **🔤 Google Outfit & Inter Typography:** Premium font pairing (`Outfit`, `Inter`, `JetBrains Mono`) for numbers, debt values, and metrics.
-* **📊 Apple Fitness-Style Metric Cards (`MetricsOverview.tsx`):** KPI cards with gradient progress rings, trend indicators (+14.2% MoM), and glowing badges.
 * **💼 Enhanced Scannable Lead Directory (`LeadsTable.tsx`):** Interactive channel filter pills (*Google*, *WhatsApp*, *Calls*, *Email*, *Harassment Flagged*), hover elevations, and status badges.
 
 ### 1. 🖥️ Dual Role Auth & Separate Dashboards (Admin vs Employee Workspace)

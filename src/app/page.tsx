@@ -127,9 +127,13 @@ export default function Home() {
     const actualActiveLeads = leads.filter(
       (l) => l.assignedEmployeeId === emp.id && l.status !== 'settled'
     ).length;
+    const totalAssignedLeads = leads.filter(
+      (l) => l.assignedEmployeeId === emp.id
+    ).length;
     return {
       ...emp,
       activeCases: actualActiveLeads,
+      totalAssignedCases: totalAssignedLeads,
     };
   });
 
@@ -177,7 +181,7 @@ export default function Home() {
   });
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-dark)', color: 'var(--text-primary)', paddingBottom: '60px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-main)', color: 'var(--text-primary)', paddingBottom: '60px' }}>
       {/* Top Navbar */}
       <Navbar
         session={session}
@@ -201,11 +205,12 @@ export default function Home() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            background: 'rgba(255, 255, 255, 0.03)',
+            background: 'var(--bg-surface)',
             border: '1px solid var(--border-subtle)',
             borderRadius: '16px',
             padding: '14px 20px',
             marginBottom: '24px',
+            boxShadow: 'var(--card-shadow)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -218,9 +223,9 @@ export default function Home() {
                 fontWeight: 700,
                 padding: '4px 12px',
                 borderRadius: '8px',
-                background: isAdmin ? 'rgba(99, 102, 241, 0.2)' : 'rgba(52, 211, 153, 0.2)',
-                color: isAdmin ? '#a5b4fc' : '#34d399',
-                border: isAdmin ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid rgba(52, 211, 153, 0.4)',
+                background: isAdmin ? 'rgba(0, 113, 227, 0.1)' : 'rgba(52, 199, 89, 0.1)',
+                color: isAdmin ? 'var(--accent-apple-blue)' : '#248a3d',
+                border: '1px solid var(--border-subtle)',
               }}
             >
               {isAdmin ? '👑 Agency Admin Dashboard' : `💼 Specialist Workspace: ${session.user?.name}`}
@@ -230,25 +235,32 @@ export default function Home() {
           {/* Admin Inspector Dropdown */}
           {isAdmin ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '12px', color: '#a5b4fc', fontWeight: 600 }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                 Inspect Employee Caseload:
               </span>
               <select
                 value={adminInspectedEmpId}
                 onChange={(e) => setAdminInspectedEmpId(e.target.value)}
-                className="apple-input"
-                style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '8px', background: '#161927', color: '#fff' }}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  borderRadius: '8px',
+                  background: 'var(--bg-pill)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-subtle)',
+                  outline: 'none',
+                }}
               >
                 <option value="master">All Employees (Global Agency Master)</option>
                 {syncedEmployees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.name} ({emp.activeCases} active cases)
+                    {emp.name} ({emp.activeCases} active cases • {emp.totalAssignedCases} total)
                   </option>
                 ))}
               </select>
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#34d399' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#248a3d' }}>
               <RefreshCw size={14} className={isLoadingDb ? 'spin' : ''} onClick={loadDatabaseData} style={{ cursor: 'pointer' }} />
               <span>Personal Caseload Synced ({isolatedEmployeeLeads.length} Clients)</span>
             </div>
@@ -259,9 +271,9 @@ export default function Home() {
         {isAdmin ? (
           <div>
             <div style={{ marginBottom: '24px' }}>
-              <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#fff' }}>
+              <h1 style={{ fontSize: '26px', fontWeight: 800, color: 'var(--text-primary)' }}>
                 {adminInspectedEmpId !== 'master' && activeEmployeeObj
-                  ? `🔍 Inspecting Employee: ${activeEmployeeObj.name} (${displayedLeads.length} Assigned Leads)`
+                  ? `🔍 Inspecting Employee: ${activeEmployeeObj.name} (${activeEmployeeObj.activeCases} Active Cases • ${displayedLeads.length} Total History)`
                   : '👑 Admin Operational Control Center'}
               </h1>
               <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '4px' }}>
@@ -297,8 +309,8 @@ export default function Home() {
                   padding: '10px 16px',
                   background: 'transparent',
                   border: 'none',
-                  borderBottom: activeTab === 'leads' ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                  color: activeTab === 'leads' ? '#fff' : 'var(--text-muted)',
+                  borderBottom: activeTab === 'leads' ? '2px solid var(--accent-apple-blue)' : '2px solid transparent',
+                  color: activeTab === 'leads' ? 'var(--accent-apple-blue)' : 'var(--text-muted)',
                   fontWeight: activeTab === 'leads' ? 700 : 500,
                   fontSize: '14px',
                   cursor: 'pointer',
@@ -317,8 +329,8 @@ export default function Home() {
                   padding: '10px 16px',
                   background: 'transparent',
                   border: 'none',
-                  borderBottom: activeTab === 'employees' ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                  color: activeTab === 'employees' ? '#fff' : 'var(--text-muted)',
+                  borderBottom: activeTab === 'employees' ? '2px solid var(--accent-apple-blue)' : '2px solid transparent',
+                  color: activeTab === 'employees' ? 'var(--accent-apple-blue)' : 'var(--text-muted)',
                   fontWeight: activeTab === 'employees' ? 700 : 500,
                   fontSize: '14px',
                   cursor: 'pointer',

@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import {
-  User,
   Phone,
   Mail,
   Building,
@@ -15,8 +14,7 @@ import {
   RefreshCw,
   FileText,
   X,
-  ExternalLink,
-  MessageSquare,
+  Send,
 } from 'lucide-react';
 import { Lead, Employee } from '../lib/types';
 
@@ -98,7 +96,7 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
         setOcrSuccessMsg(`Error: ${json.error}`);
       }
     } catch (err: any) {
-      setOcrSuccessMsg(`Failed OCR upload: ${err.message}`);
+      setOcrSuccessMsg(`Failed OCR scan: ${err.message}`);
     } finally {
       setIsUploadingOcr(false);
     }
@@ -112,11 +110,11 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
 
   return (
     <div>
-      {/* GRID LAYOUT OF CLIENT CARDS */}
       {leads.length === 0 ? (
         <div className="glass-card" style={{ padding: '40px', textAlign: 'center' }}>
-          <User size={36} color="var(--text-muted)" style={{ margin: '0 auto 12px auto' }} />
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>No Active Clients Assigned</h3>
+          <h4 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
+            No Active Assigned Clients Yet
+          </h4>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
             When the system or admin assigns clients to your caseload, they will appear here as interactive cards.
           </p>
@@ -139,55 +137,35 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
                 style={{
                   padding: '20px',
                   borderRadius: '18px',
-                  border: isSettled ? '1px solid rgba(52, 211, 153, 0.4)' : '1px solid var(--border-subtle)',
-                  background: isSettled
-                    ? 'linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, rgba(14, 15, 22, 0.95) 100%)'
-                    : 'linear-gradient(180deg, rgba(24, 25, 35, 0.8) 0%, rgba(14, 15, 22, 0.9) 100%)',
+                  border: '1px solid var(--border-subtle)',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  transition: 'all 0.2s ease',
                   cursor: 'pointer',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
                 }}
                 onClick={() => setSelectedLead(lead)}
               >
                 {/* Card Top Header */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <span
-                      style={{
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        textTransform: 'uppercase',
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        background: isSettled ? 'rgba(52, 211, 153, 0.2)' : 'rgba(99, 102, 241, 0.2)',
-                        color: isSettled ? '#34d399' : '#a5b4fc',
-                        border: isSettled ? '1px solid rgba(52, 211, 153, 0.4)' : '1px solid rgba(99, 102, 241, 0.3)',
-                      }}
-                    >
-                      {isSettled ? '🎉 Case Settled (Happy Customer)' : lead.status.replace('_', ' ')}
+                    <span className={`badge-status ${lead.status}`}>
+                      {isSettled ? '🎉 Case Settled' : lead.status.replace('_', ' ')}
                     </span>
                     <span
                       style={{
                         fontSize: '10px',
-                        fontWeight: 700,
+                        fontWeight: 600,
                         padding: '3px 8px',
-                        borderRadius: '6px',
-                        background:
-                          lead.distressScore === 'High' || lead.distressScore === 'Critical'
-                            ? 'rgba(244, 63, 94, 0.2)'
-                            : 'rgba(251, 191, 36, 0.2)',
-                        color:
-                          lead.distressScore === 'High' || lead.distressScore === 'Critical' ? '#f43f5e' : '#fbbf24',
+                        borderRadius: '999px',
+                        background: 'var(--bg-pill)',
+                        color: 'var(--text-secondary)',
                       }}
                     >
                       {lead.distressScore} Distress
                     </span>
                   </div>
 
-                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
                     {lead.fullName}
                   </h3>
                   <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
@@ -197,17 +175,17 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
                   {/* Debt Portfolio Pill */}
                   <div
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
+                      background: 'var(--bg-pill)',
                       borderRadius: '12px',
                       padding: '12px',
-                      border: '1px solid rgba(255, 255, 255, 0.05)',
+                      border: '1px solid var(--border-subtle)',
                       marginBottom: '16px',
                     }}
                   >
                     <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
                       Assigned Debt Portfolio
                     </span>
-                    <div style={{ fontSize: '20px', fontWeight: 800, color: '#fff', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
+                    <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
                       ₹{lead.totalDebtAmount.toLocaleString('en-IN')}
                     </div>
                   </div>
@@ -221,7 +199,7 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
                       setSelectedLead(lead);
                     }}
                     className="btn-apple-primary"
-                    style={{ flex: 1, justifyContent: 'center', padding: '9px 12px', fontSize: '12px', borderRadius: '10px' }}
+                    style={{ flex: 1, justifyContent: 'center', padding: '9px 12px', fontSize: '12px' }}
                   >
                     <FileText size={14} />
                     <span>Open Case Details</span>
@@ -240,8 +218,8 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
             position: 'fixed',
             inset: 0,
             zIndex: 110,
-            background: 'rgba(0, 0, 0, 0.8)',
-            backdropFilter: 'blur(16px)',
+            background: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(12px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -257,10 +235,11 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
               overflowY: 'auto',
               padding: '28px',
               borderRadius: '24px',
-              background: '#0e0f17',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
               position: 'relative',
-              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.9)',
+              boxShadow: 'var(--card-shadow)',
+              color: 'var(--text-primary)',
             }}
           >
             {/* Close Button */}
@@ -270,9 +249,9 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
                 position: 'absolute',
                 top: '20px',
                 right: '20px',
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: 'none',
-                color: 'var(--text-muted)',
+                background: 'var(--bg-pill)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-secondary)',
                 width: '32px',
                 height: '32px',
                 borderRadius: '50%',
@@ -285,34 +264,26 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
               <X size={16} />
             </button>
 
-            {/* Modal Header */}
+            {/* Header */}
             <div style={{ marginBottom: '20px' }}>
-              <span
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  padding: '3px 8px',
-                  borderRadius: '6px',
-                  background: selectedLead.status === 'settled' ? 'rgba(52, 211, 153, 0.2)' : 'rgba(99, 102, 241, 0.2)',
-                  color: selectedLead.status === 'settled' ? '#34d399' : '#a5b4fc',
-                }}
-              >
-                {selectedLead.status === 'settled' ? '🎉 Settled (Happy Customer)' : selectedLead.status.replace('_', ' ')}
-              </span>
-              <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#fff', marginTop: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span className={`badge-status ${selectedLead.status}`}>
+                  {selectedLead.status === 'settled' ? '🎉 Case Finished & Settled' : selectedLead.status.replace('_', ' ')}
+                </span>
+              </div>
+              <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)' }}>
                 {selectedLead.fullName}
               </h2>
               <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Assigned Specialist: <strong>{employee?.name || 'You'}</strong> • Phone: {selectedLead.phone}
+                📞 {selectedLead.phone} • {selectedLead.email || 'No email'}
               </p>
             </div>
 
-            {/* CASE SETTLEMENT COMPLETION ACTION BUTTON */}
+            {/* CASE COMPLETION BUTTON */}
             <div
               style={{
-                background: selectedLead.status === 'settled' ? 'rgba(52, 211, 153, 0.15)' : 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(52, 211, 153, 0.4)',
+                background: selectedLead.status === 'settled' ? 'rgba(52, 199, 89, 0.1)' : 'var(--bg-pill)',
+                border: '1px solid var(--border-subtle)',
                 borderRadius: '16px',
                 padding: '16px',
                 marginBottom: '20px',
@@ -322,16 +293,14 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
               }}
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Sparkles size={16} color="#34d399" />
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#34d399' }}>
-                    {selectedLead.status === 'settled' ? '🎉 Case Fully Settled' : 'Case Completion Control'}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles size={16} color="var(--accent-apple-blue)" />
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {selectedLead.status === 'settled' ? '🎉 Case Settled' : 'Finish Client Case'}
                   </span>
                 </div>
                 <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                  {selectedLead.status === 'settled'
-                    ? 'Client marked as Happy Customer. Celebration WhatsApp sent!'
-                    : 'Click when negotiations finish to send Celebration WhatsApp to client.'}
+                  Mark finished & dispatch Celebration WhatsApp.
                 </p>
               </div>
 
@@ -339,34 +308,61 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
                 onClick={() => handleMarkCaseFinished(selectedLead.id)}
                 disabled={isSettling || selectedLead.status === 'settled'}
                 className="btn-apple-primary"
-                style={{
-                  padding: '9px 14px',
-                  fontSize: '11px',
-                  background: selectedLead.status === 'settled' ? '#047857' : 'linear-gradient(135deg, #10b981, #059669)',
-                  color: '#fff',
-                  borderRadius: '10px',
-                  whiteSpace: 'nowrap',
-                }}
+                style={{ padding: '8px 14px', fontSize: '12px' }}
               >
-                {isSettling ? <RefreshCw size={13} className="spin" /> : <CheckCircle2 size={14} />}
+                {isSettling ? <RefreshCw size={14} className="spin" /> : <CheckCircle2 size={14} />}
                 <span>{selectedLead.status === 'settled' ? 'Settled' : 'Client Case Finished'}</span>
               </button>
             </div>
 
             {settlementSuccessMsg && (
-              <div style={{ padding: '10px 14px', borderRadius: '10px', background: 'rgba(52, 211, 153, 0.2)', border: '1px solid rgba(52, 211, 153, 0.3)', color: '#a7f3d0', fontSize: '11px', marginBottom: '20px' }}>
+              <div style={{ padding: '10px 14px', borderRadius: '10px', background: 'rgba(52, 199, 89, 0.1)', color: '#248a3d', fontSize: '12px', marginBottom: '16px' }}>
                 {settlementSuccessMsg}
               </div>
             )}
 
-            {/* DEBT PORTFOLIO CARD */}
+            {/* GEMINI VISION OCR BANK NOTICE PARSER */}
+            <div className="glass-card" style={{ padding: '16px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  📄 Gemini Vision OCR Notice Scanner
+                </span>
+                {isUploadingOcr && <RefreshCw size={14} className="spin" color="var(--accent-apple-blue)" />}
+              </div>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                Upload any bank legal notice image/PDF. Gemini Flash will extract principal debt, interest, and target settlement waiver.
+              </p>
+
+              <label
+                className="btn-apple-secondary"
+                style={{ cursor: 'pointer', display: 'inline-flex', width: '100%', justifyContent: 'center' }}
+              >
+                <Upload size={14} />
+                <span>{isUploadingOcr ? 'Scanning with Gemini OCR...' : 'Upload Bank Legal Notice Image / PDF'}</span>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => handleDocumentOcrUpload(e, selectedLead)}
+                  style={{ display: 'none' }}
+                  disabled={isUploadingOcr}
+                />
+              </label>
+
+              {ocrSuccessMsg && (
+                <div style={{ padding: '10px', borderRadius: '8px', background: 'var(--bg-pill)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', fontSize: '11px', marginTop: '10px' }}>
+                  {ocrSuccessMsg}
+                </div>
+              )}
+            </div>
+
+            {/* DEBT BREAKDOWN */}
             <div className="glass-card" style={{ padding: '16px', marginBottom: '20px' }}>
               <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                Debt Metrics & Lenders
+                Extracted Lender Breakdown
               </span>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '4px', marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Total Debt Portfolio</span>
-                <span style={{ fontSize: '20px', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#fff' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Total Liability</span>
+                <span style={{ fontSize: '18px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
                   ₹{selectedLead.totalDebtAmount.toLocaleString('en-IN')}
                 </span>
               </div>
@@ -378,18 +374,14 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
                     style={{
                       display: 'flex',
                       justifyContent: 'space-between',
-                      alignItems: 'center',
-                      background: 'rgba(0, 0, 0, 0.3)',
+                      background: 'var(--bg-pill)',
                       padding: '8px 12px',
                       borderRadius: '8px',
                       fontSize: '12px',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Building size={13} color="#a5b4fc" />
-                      <span style={{ color: '#fff', fontWeight: 500 }}>{lender.name}</span>
-                    </div>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#f8fafc' }}>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{lender.name}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-primary)' }}>
                       ₹{lender.amount.toLocaleString('en-IN')}
                     </span>
                   </div>
@@ -397,87 +389,24 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
               </div>
             </div>
 
-            {/* DOCUMENT OCR UPLOAD TOOL (GEMINI 2.5 FLASH VISION) */}
-            <div className="glass-card" style={{ padding: '16px', marginBottom: '20px', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Upload size={16} color="#38bdf8" />
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#38bdf8' }}>
-                    Upload Bank Notice / Bill (Gemini Vision OCR)
-                  </span>
-                </div>
-                {isUploadingOcr && <RefreshCw size={13} className="spin" color="#38bdf8" />}
-              </div>
-              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px' }}>
-                Upload photo of client's bank notice or credit statement to run <strong>Google Gemini 2.5 Flash Vision OCR</strong>.
-              </p>
-
-              <label
-                className="btn-apple-secondary"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 14px',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  background: 'rgba(56, 189, 248, 0.15)',
-                  border: '1px solid rgba(56, 189, 248, 0.3)',
-                  color: '#38bdf8',
-                  borderRadius: '8px',
-                }}
-              >
-                <Upload size={13} />
-                <span>Select Notice Photo...</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleDocumentOcrUpload(e, selectedLead)}
-                  style={{ display: 'none' }}
-                />
-              </label>
-
-              {ocrSuccessMsg && (
-                <p style={{ fontSize: '11px', color: '#38bdf8', marginTop: '10px', fontWeight: 500 }}>
-                  {ocrSuccessMsg}
-                </p>
-              )}
-            </div>
-
-            {/* RBI CEASE-AND-DESIST LEGAL NOTICE COPY */}
+            {/* ANTI HARASSMENT NOTICE */}
             {selectedLead.harassmentReported && (
-              <div
-                style={{
-                  background: 'rgba(244, 63, 94, 0.08)',
-                  border: '1px solid rgba(244, 63, 94, 0.3)',
-                  borderRadius: '14px',
-                  padding: '16px',
-                }}
-              >
+              <div style={{ background: 'rgba(255, 59, 48, 0.08)', border: '1px solid rgba(255, 59, 48, 0.2)', padding: '16px', borderRadius: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <ShieldAlert size={16} color="#f43f5e" />
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#fda4af' }}>
-                      RBI Anti-Harassment Representation Notice
-                    </span>
-                  </div>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#ff3b30' }}>
+                    🛡️ Anti-Harassment Representation Notice
+                  </span>
                   <button
-                    onClick={() =>
-                      copyToClipboard(
-                        `FORMAL LEGAL REPRESENTATION NOTICE\nClient: ${selectedLead.fullName}\nDebt: ₹${selectedLead.totalDebtAmount.toLocaleString(
-                          'en-IN'
-                        )}\nSpecialist: ${employee?.name || 'TRYAM Team'}`
-                      )
-                    }
+                    onClick={() => copyToClipboard(`CEASE & DESIST NOTICE FOR ${selectedLead.fullName}`)}
                     className="btn-apple-secondary"
-                    style={{ padding: '5px 10px', fontSize: '10px' }}
+                    style={{ padding: '4px 8px', fontSize: '10px' }}
                   >
-                    {copiedNotice ? <Check size={12} color="#34d399" /> : <Copy size={12} />}
-                    <span>{copiedNotice ? 'Copied' : 'Copy Notice'}</span>
+                    {copiedNotice ? <Check size={12} color="#248a3d" /> : <Copy size={12} />}
+                    <span>{copiedNotice ? 'Copied' : 'Copy'}</span>
                   </button>
                 </div>
-                <p style={{ fontSize: '11px', color: '#fecdd3', lineHeight: '1.4' }}>
-                  Notice prepared under RBI Fair Practices Code for Lenders (RBI/2015-16/160). Copy to send to harassing recovery personnel.
+                <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                  Client is protected under RBI Fair Practices Code. Serve this representation notice to recovery personnel to halt direct contacting.
                 </p>
               </div>
             )}

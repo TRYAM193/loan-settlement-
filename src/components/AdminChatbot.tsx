@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, MessageSquare, X, Send, Key, Bot, User, RefreshCw, ChevronDown, Check, Shield } from 'lucide-react';
+import { Sparkles, MessageSquare, X, Send, Key, Bot, User, RefreshCw } from 'lucide-react';
 import { Lead, Employee, Settlement, UserSession } from '../lib/types';
 
 interface Message {
@@ -23,7 +23,7 @@ const parseBoldText = (text: string) => {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i} style={{ color: '#fff', fontWeight: 700 }}>{part.slice(2, -2)}</strong>;
+      return <strong key={i} style={{ fontWeight: 700 }}>{part.slice(2, -2)}</strong>;
     }
     return part;
   });
@@ -35,7 +35,7 @@ const renderFormattedMessage = (content: string) => {
     // Headers
     if (line.startsWith('### ')) {
       return (
-        <h4 key={idx} style={{ color: '#fff', fontSize: '13px', fontWeight: 800, marginTop: '8px', marginBottom: '4px' }}>
+        <h4 key={idx} style={{ fontSize: '13px', fontWeight: 700, marginTop: '8px', marginBottom: '4px' }}>
           {parseBoldText(line.slice(4))}
         </h4>
       );
@@ -43,7 +43,7 @@ const renderFormattedMessage = (content: string) => {
     if (line.startsWith('## ') || line.startsWith('# ')) {
       const cleanLine = line.startsWith('## ') ? line.slice(3) : line.slice(2);
       return (
-        <h3 key={idx} style={{ color: '#fff', fontSize: '14px', fontWeight: 800, marginTop: '10px', marginBottom: '6px' }}>
+        <h3 key={idx} style={{ fontSize: '14px', fontWeight: 700, marginTop: '10px', marginBottom: '6px' }}>
           {parseBoldText(cleanLine)}
         </h3>
       );
@@ -53,7 +53,7 @@ const renderFormattedMessage = (content: string) => {
     if (line.trim().startsWith('- ') || line.trim().startsWith('* ') || line.trim().startsWith('• ')) {
       const cleanLine = line.trim().slice(2);
       return (
-        <li key={idx} style={{ marginLeft: '12px', listStyleType: 'disc', marginBottom: '3px', color: '#e2e8f0' }}>
+        <li key={idx} style={{ marginLeft: '12px', listStyleType: 'disc', marginBottom: '3px' }}>
           {parseBoldText(cleanLine)}
         </li>
       );
@@ -65,7 +65,7 @@ const renderFormattedMessage = (content: string) => {
     }
 
     return (
-      <p key={idx} style={{ margin: '2px 0', color: '#e2e8f0' }}>
+      <p key={idx} style={{ margin: '2px 0' }}>
         {parseBoldText(line)}
       </p>
     );
@@ -79,20 +79,20 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
   session,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showKeyConfig, setShowKeyConfig] = useState(false);
+  const [customApiKey, setCustomApiKey] = useState('');
+  const [savedKeySuccess, setSavedKeySuccess] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [customApiKey, setCustomApiKey] = useState('');
-  const [showKeyConfig, setShowKeyConfig] = useState(false);
-  const [savedKeySuccess, setSavedKeySuccess] = useState(false);
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: 'init-1',
+      id: '1',
       role: 'assistant',
-      content: `### 🤖 Hello Admin! I'm your TRYAM AI CRM Assistant.\n\nI have direct access to your live Supabase database. You can ask me anything about:\n- 📊 **Team Workload & Active Caseloads**\n- 💰 **Total Debt Portfolio & Settlement Stats**\n- 📲 **WhatsApp Dispatch Statuses**\n- 🛡️ **RBI Anti-Harassment Compliance**\n\nHow can I help you today?`,
+      content: `👋 Hello ${session?.user?.name || 'Manager'}! I am your **TRYAM AI Operational Copilot**. I have real-time access to your database: **${leads.length} Active Leads**, **${employees.length} Employees**, and total debt records.\n\nAsk me anything like *"Show me Vijay's cases"*, *"Which leads are flagged for harassment?"*, or *"Calculate overall portfolio debt"*!`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      source: 'Database Context Synchronized',
     },
   ]);
 
@@ -106,12 +106,22 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
     }
   }, [messages, isOpen]);
 
+  const handleSaveApiKey = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (customApiKey.trim()) {
+      localStorage.setItem('tryam_custom_api_key', customApiKey.trim());
+      setSavedKeySuccess(true);
+      setTimeout(() => setSavedKeySuccess(false), 2000);
+      setShowKeyConfig(false);
+    }
+  };
+
   const handleSendMessage = async (textToSend?: string) => {
     const query = textToSend || inputMessage;
     if (!query.trim() || isLoading) return;
 
     const userMsg: Message = {
-      id: `usr-${Date.now()}`,
+      id: Date.now().toString(),
       role: 'user',
       content: query,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -122,36 +132,52 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
     setIsLoading(true);
 
     try {
+      const apiKeyToUse = customApiKey || localStorage.getItem('tryam_custom_api_key') || '';
+
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: query,
-          history: messages.map((m) => ({ role: m.role, content: m.content })),
-          customApiKey: customApiKey.trim(),
-          userRole: session?.user?.role || 'admin',
-          userEmployeeId: session?.user?.employeeId || '',
+          messages: [...messages, userMsg].map((m) => ({ role: m.role, content: m.content })),
+          apiKey: apiKeyToUse,
+          session,
+          leads,
+          employees,
+          settlements,
         }),
       });
 
       const json = await res.json();
 
-      const aiMsg: Message = {
-        id: `ai-${Date.now()}`,
-        role: 'assistant',
-        content: json.success ? json.reply : `Sorry, I encountered an issue: ${json.error}`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        source: json.source || 'TRYAM AI Engine',
-      };
-
-      setMessages((prev) => [...prev, aiMsg]);
+      if (json.success) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: json.reply,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            source: json.source || 'Database AI Engine',
+          },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: `⚠️ ${json.error || 'Failed to process request.'}`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+      }
     } catch (err: any) {
       setMessages((prev) => [
         ...prev,
         {
-          id: `err-${Date.now()}`,
+          id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: `Unable to connect to AI engine: ${err.message}`,
+          content: `⚠️ Connection error: ${err.message}`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
@@ -160,106 +186,81 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
     }
   };
 
-  const handleSaveApiKey = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavedKeySuccess(true);
-    setTimeout(() => {
-      setSavedKeySuccess(false);
-      setShowKeyConfig(false);
-    }, 1500);
-  };
-
   const quickPrompts = [
-    { label: '👥 Team Workload', query: 'Show me full employee workload and active caseload breakdown.' },
-    { label: '💰 Debt Metrics', query: 'Summarize total debt portfolio and settlement metrics.' },
-    { label: '📲 WhatsApp Status', query: 'How are WhatsApp notifications sent to employees?' },
-    { label: '🛡️ RBI Rules', query: 'What are the RBI compliance guidelines for debt collection?' },
+    { label: '📊 Portfolio Breakdown', query: 'Provide a breakdown of total debt and active cases per employee.' },
+    { label: '🛡️ Workplace Harassment Cases', query: 'Which clients have flagged workplace recovery agent harassment?' },
+    { label: '⚖️ Lowest Workload Agent', query: 'Which employee has the lowest workload for new lead assignment?' },
   ];
 
   return (
     <>
-      {/* Floating Widget Trigger Button */}
+      {/* Floating Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
           position: 'fixed',
           bottom: '28px',
           right: '28px',
-          zIndex: 99,
-          background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-          color: '#fff',
-          border: '1px solid rgba(255, 255, 255, 0.25)',
-          borderRadius: '50px',
-          padding: '14px 22px',
+          zIndex: 90,
+          background: 'var(--accent-apple-gradient)',
+          color: '#ffffff',
+          border: 'none',
+          borderRadius: '999px',
+          padding: '12px 20px',
+          boxShadow: '0 8px 24px rgba(0, 113, 227, 0.35)',
+          cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
-          cursor: 'pointer',
-          boxShadow: '0 12px 30px rgba(99, 102, 241, 0.5)',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          gap: '8px',
+          fontWeight: 600,
+          fontSize: '13px',
+          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
-        className="hover:scale-105"
       >
-        <Sparkles size={20} className="animate-spin-slow" />
-        <span style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '-0.2px' }}>
-          TRYAM AI Assistant
-        </span>
-        <span
-          style={{
-            background: '#34d399',
-            color: '#0f172a',
-            fontSize: '10px',
-            fontWeight: 800,
-            padding: '2px 7px',
-            borderRadius: '10px',
-            textTransform: 'uppercase',
-          }}
-        >
-          Live DB
-        </span>
+        <Sparkles size={18} />
+        <span>TRYAM AI Copilot</span>
       </button>
 
-      {/* Chatbot Floating Dialog Window */}
+      {/* Floating Chat Drawer */}
       {isOpen && (
         <div
+          className="animate-fade-in"
           style={{
             position: 'fixed',
-            bottom: '96px',
+            bottom: '84px',
             right: '28px',
-            zIndex: 100,
+            zIndex: 95,
             width: '420px',
-            maxWidth: 'calc(100vw - 40px)',
-            height: '600px',
-            maxHeight: 'calc(100vh - 120px)',
-            background: 'rgba(14, 15, 23, 0.95)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
+            height: '580px',
+            maxWidth: 'calc(100vw - 32px)',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: '24px',
-            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.8)',
+            boxShadow: 'var(--card-shadow)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
+            color: 'var(--text-primary)',
           }}
-          className="animate-fade-in"
         >
           {/* Header */}
           <div
             style={{
               padding: '16px 20px',
-              background: 'linear-gradient(180deg, rgba(30, 31, 48, 0.8) 0%, rgba(14, 15, 23, 0.8) 100%)',
               borderBottom: '1px solid var(--border-subtle)',
               display: 'flex',
-              justifyContent: 'space-between',
               alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'var(--bg-pill)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div
                 style={{
-                  width: '34px',
-                  height: '34px',
+                  width: '32px',
+                  height: '32px',
                   borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                  background: 'var(--accent-apple-blue)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -269,118 +270,44 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
                 <Bot size={18} />
               </div>
               <div>
-                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>TRYAM CRM AI Assistant</h3>
-                <p style={{ fontSize: '11px', color: '#a5b4fc' }}>
-                  Connected to Supabase • Context-Aware
-                </p>
+                <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  TRYAM AI Copilot
+                </h3>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                  Realtime CRM & Supabase Intelligence
+                </span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', gap: '6px' }}>
               <button
                 onClick={() => setShowKeyConfig(!showKeyConfig)}
-                title="Configure Custom AI API Key"
                 style={{
-                  background: customApiKey ? 'rgba(52, 211, 153, 0.15)' : 'rgba(255, 255, 255, 0.06)',
-                  border: customApiKey ? '1px solid #34d399' : 'none',
-                  color: customApiKey ? '#34d399' : 'var(--text-muted)',
-                  padding: '6px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-              >
-                <Key size={15} />
-              </button>
-              <button
-                onClick={() => setIsOpen(false)}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.06)',
+                  background: 'transparent',
                   border: 'none',
                   color: 'var(--text-muted)',
                   padding: '6px',
                   borderRadius: '8px',
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
+                }}
+                title="Configure API Key"
+              >
+                <Key size={16} />
+              </button>
+              <button
+                onClick={() => setIsOpen(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  padding: '6px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
                 }}
               >
                 <X size={16} />
               </button>
             </div>
-          </div>
-
-          {/* Optional API Key Configuration Popover */}
-          {showKeyConfig && (
-            <div
-              style={{
-                padding: '14px 20px',
-                background: 'rgba(30, 41, 59, 0.95)',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-              }}
-            >
-              <form onSubmit={handleSaveApiKey}>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '6px' }}>
-                  Custom Gemini / OpenAI API Key (Optional)
-                </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="password"
-                    placeholder="Paste your API key here..."
-                    value={customApiKey}
-                    onChange={(e) => setCustomApiKey(e.target.value)}
-                    style={{
-                      flex: 1,
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
-                      borderRadius: '8px',
-                      padding: '6px 10px',
-                      color: '#fff',
-                      fontSize: '12px',
-                    }}
-                  />
-                  <button type="submit" className="btn-apple-primary" style={{ padding: '6px 12px', fontSize: '11px' }}>
-                    {savedKeySuccess ? <Check size={14} color="#34d399" /> : 'Save'}
-                  </button>
-                </div>
-                <p style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
-                  Leave empty to use built-in Supabase intelligence engine.
-                </p>
-              </form>
-            </div>
-          )}
-
-          {/* Quick Prompts Chips */}
-          <div
-            style={{
-              padding: '10px 16px',
-              background: 'rgba(0, 0, 0, 0.2)',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-              display: 'flex',
-              gap: '6px',
-              overflowX: 'auto',
-            }}
-          >
-            {quickPrompts.map((p, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSendMessage(p.query)}
-                style={{
-                  whiteSpace: 'nowrap',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '12px',
-                  padding: '4px 10px',
-                  color: '#cbd5e1',
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                }}
-              >
-                {p.label}
-              </button>
-            ))}
           </div>
 
           {/* Messages Feed */}
@@ -409,7 +336,7 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
                       width: '28px',
                       height: '28px',
                       borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                      background: 'var(--accent-apple-blue)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -427,15 +354,15 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
                     maxWidth: '82%',
                     background:
                       m.role === 'user'
-                        ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'
-                        : 'rgba(255, 255, 255, 0.05)',
+                        ? 'var(--accent-apple-blue)'
+                        : 'var(--bg-pill)',
                     border:
-                      m.role === 'user' ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
+                      m.role === 'user' ? 'none' : '1px solid var(--border-subtle)',
                     borderRadius: '16px',
                     borderTopRightRadius: m.role === 'user' ? '4px' : '16px',
                     borderTopLeftRadius: m.role === 'assistant' ? '4px' : '16px',
                     padding: '12px 14px',
-                    color: '#fff',
+                    color: m.role === 'user' ? '#ffffff' : 'var(--text-primary)',
                     fontSize: '13px',
                     lineHeight: '1.5',
                   }}
@@ -444,7 +371,7 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
                   <div
                     style={{
                       fontSize: '10px',
-                      color: m.role === 'user' ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)',
+                      color: m.role === 'user' ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)',
                       marginTop: '6px',
                       display: 'flex',
                       justifyContent: 'space-between',
@@ -452,7 +379,7 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
                     }}
                   >
                     <span>{m.timestamp}</span>
-                    {m.source && <span style={{ color: '#818cf8' }}>{m.source}</span>}
+                    {m.source && <span style={{ color: 'var(--accent-apple-blue)' }}>{m.source}</span>}
                   </div>
                 </div>
 
@@ -462,11 +389,12 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
                       width: '28px',
                       height: '28px',
                       borderRadius: '50%',
-                      background: 'rgba(255, 255, 255, 0.15)',
+                      background: 'var(--bg-pill)',
+                      border: '1px solid var(--border-subtle)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#fff',
+                      color: 'var(--text-primary)',
                       fontSize: '12px',
                       flexShrink: 0,
                     }}
@@ -484,7 +412,7 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
                     width: '28px',
                     height: '28px',
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                    background: 'var(--accent-apple-blue)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -502,11 +430,43 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Quick Prompts Chips */}
+          <div
+            style={{
+              padding: '10px 16px',
+              background: 'var(--bg-pill)',
+              borderBottom: '1px solid var(--border-subtle)',
+              display: 'flex',
+              gap: '6px',
+              overflowX: 'auto',
+            }}
+          >
+            {quickPrompts.map((p, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSendMessage(p.query)}
+                style={{
+                  whiteSpace: 'nowrap',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '12px',
+                  padding: '4px 10px',
+                  color: 'var(--text-secondary)',
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
           {/* Input Footer */}
           <div
             style={{
               padding: '12px 16px',
-              background: 'rgba(0, 0, 0, 0.4)',
+              background: 'var(--bg-surface)',
               borderTop: '1px solid var(--border-subtle)',
               display: 'flex',
               gap: '8px',
@@ -521,11 +481,11 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
               style={{
                 flex: 1,
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
+                background: 'var(--bg-pill)',
+                border: '1px solid var(--border-subtle)',
                 borderRadius: '14px',
                 padding: '10px 14px',
-                color: '#fff',
+                color: 'var(--text-primary)',
                 fontSize: '13px',
                 outline: 'none',
               }}
@@ -533,21 +493,14 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
             <button
               onClick={() => handleSendMessage()}
               disabled={!inputMessage.trim() || isLoading}
+              className="btn-apple-primary"
               style={{
-                background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-                border: 'none',
-                color: '#fff',
-                width: '38px',
-                height: '38px',
+                padding: '10px 14px',
                 borderRadius: '12px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
                 opacity: !inputMessage.trim() || isLoading ? 0.5 : 1,
               }}
             >
-              <Send size={16} />
+              <Send size={15} />
             </button>
           </div>
         </div>

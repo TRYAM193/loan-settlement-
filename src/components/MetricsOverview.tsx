@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { IndianRupee, Users, ShieldAlert, Zap, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { IndianRupee, Users, ShieldAlert, Zap, TrendingUp, Activity } from 'lucide-react';
 import { Employee, Lead, Settlement } from '../lib/types';
+import { AntigravityCard } from './AntigravityCard';
 
 interface MetricsOverviewProps {
   leads: Lead[];
@@ -15,9 +16,12 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
   employees,
   settlements,
 }) => {
-  const totalDebt = leads.reduce((acc, curr) => acc + curr.totalDebtAmount, 0);
-  const activeLeadsCount = leads.length;
-  const harassmentCount = leads.filter((l) => l.harassmentReported).length;
+  const activeLeads = leads.filter((l) => l.status !== 'settled');
+  const settledLeads = leads.filter((l) => l.status === 'settled');
+
+  const totalActiveDebt = activeLeads.reduce((acc, curr) => acc + curr.totalDebtAmount, 0);
+  const activeLeadsCount = activeLeads.length;
+  const harassmentCount = activeLeads.filter((l) => l.harassmentReported).length;
 
   const totalActiveCases = employees.reduce((acc, curr) => acc + curr.activeCases, 0);
   const totalMaxCapacity = employees.reduce((acc, curr) => acc + curr.maxCapacity, 0);
@@ -33,66 +37,67 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
         gap: '18px',
         marginBottom: '28px',
+        perspective: '1200px',
       }}
     >
-      {/* Metric 1: Total Debt Portfolio */}
-      <div className="glass-card" style={{ padding: '20px' }}>
+      {/* Metric 1: Active Debt Portfolio */}
+      <AntigravityCard glowColor="rgba(0, 113, 227, 0.15)" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
               Active Debt Portfolio
             </span>
             <h3
               style={{
                 fontSize: '26px',
-                fontWeight: 800,
+                fontWeight: 700,
                 marginTop: '6px',
                 fontFamily: 'var(--font-mono)',
-                color: '#fff',
+                color: 'var(--text-primary)',
                 letterSpacing: '-0.5px',
               }}
             >
-              {formatCurrency(totalDebt)}
+              {formatCurrency(totalActiveDebt)}
             </h3>
           </div>
           <div
             style={{
-              width: '42px',
-              height: '42px',
+              width: '40px',
+              height: '40px',
               borderRadius: '12px',
-              background: 'rgba(99, 102, 241, 0.15)',
+              background: 'rgba(0, 113, 227, 0.08)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              border: '1px solid rgba(99, 102, 241, 0.3)',
+              border: '1px solid rgba(0, 113, 227, 0.15)',
             }}
           >
-            <IndianRupee size={20} color="#818cf8" />
+            <IndianRupee size={20} color="var(--accent-apple-blue)" />
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '14px', fontSize: '11px', color: '#34d399' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '14px', fontSize: '12px', color: '#248a3d', fontWeight: 600 }}>
           <TrendingUp size={13} />
           <span>+14.2% extracted via AI vision OCR</span>
         </div>
-      </div>
+      </AntigravityCard>
 
-      {/* Metric 2: Omnichannel Leads */}
-      <div className="glass-card" style={{ padding: '20px' }}>
+      {/* Metric 2: Active Ingested Clients */}
+      <AntigravityCard glowColor="rgba(0, 113, 227, 0.15)" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
               Active Ingested Clients
             </span>
             <h3
               style={{
                 fontSize: '26px',
-                fontWeight: 800,
+                fontWeight: 700,
                 marginTop: '6px',
                 fontFamily: 'var(--font-mono)',
-                color: '#fff',
+                color: 'var(--text-primary)',
                 letterSpacing: '-0.5px',
               }}
             >
@@ -101,38 +106,41 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
           </div>
           <div
             style={{
-              width: '42px',
-              height: '42px',
+              width: '40px',
+              height: '40px',
               borderRadius: '12px',
-              background: 'rgba(56, 189, 248, 0.15)',
+              background: 'var(--bg-pill)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
+              border: '1px solid var(--border-subtle)',
             }}
           >
-            <Users size={20} color="#38bdf8" />
+            <Users size={20} color="var(--text-secondary)" />
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '14px', fontSize: '11px', color: 'var(--text-muted)' }}>
-          <span>Captured via Google, WhatsApp & Calls</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '14px', fontSize: '12px', color: 'var(--text-muted)' }}>
+          <Activity size={13} />
+          <span>
+            {settledLeads.length > 0 ? `${settledLeads.length} Settled Case(s)` : 'Captured via Google, WhatsApp & Calls'}
+          </span>
         </div>
-      </div>
+      </AntigravityCard>
 
-      {/* Metric 3: Workload Balancing Efficiency */}
-      <div className="glass-card" style={{ padding: '20px' }}>
+      {/* Metric 3: Team Capacity Utilization */}
+      <AntigravityCard glowColor="rgba(0, 113, 227, 0.15)" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
               Team Capacity Utilization
             </span>
             <h3
               style={{
                 fontSize: '26px',
-                fontWeight: 800,
+                fontWeight: 700,
                 marginTop: '6px',
                 fontFamily: 'var(--font-mono)',
-                color: '#fff',
+                color: 'var(--text-primary)',
                 letterSpacing: '-0.5px',
               }}
             >
@@ -141,25 +149,25 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
           </div>
           <div
             style={{
-              width: '42px',
-              height: '42px',
+              width: '40px',
+              height: '40px',
               borderRadius: '12px',
-              background: 'rgba(16, 185, 129, 0.15)',
+              background: 'var(--bg-pill)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
+              border: '1px solid var(--border-subtle)',
             }}
           >
-            <Zap size={20} color="#34d399" />
+            <Zap size={20} color="var(--text-secondary)" />
           </div>
         </div>
-        {/* Progress Bar */}
+        {/* Restrained Apple Progress Bar */}
         <div
           style={{
             width: '100%',
             height: '6px',
-            background: 'rgba(255, 255, 255, 0.08)',
+            background: 'var(--bg-pill)',
             borderRadius: '999px',
             marginTop: '16px',
             overflow: 'hidden',
@@ -169,28 +177,28 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
             style={{
               width: `${workloadPercentage}%`,
               height: '100%',
-              background: 'var(--accent-emerald-gradient)',
+              background: 'var(--accent-apple-blue)',
               borderRadius: '999px',
               transition: 'width 0.5s ease',
             }}
           />
         </div>
-      </div>
+      </AntigravityCard>
 
-      {/* Metric 4: Harassment Protection Cases */}
-      <div className="glass-card" style={{ padding: '20px' }}>
+      {/* Metric 4: Anti-Harassment Notices */}
+      <AntigravityCard glowColor="rgba(0, 113, 227, 0.15)" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
               Anti-Harassment Notices
             </span>
             <h3
               style={{
                 fontSize: '26px',
-                fontWeight: 800,
+                fontWeight: 700,
                 marginTop: '6px',
                 fontFamily: 'var(--font-mono)',
-                color: '#fb7185',
+                color: 'var(--text-primary)',
                 letterSpacing: '-0.5px',
               }}
             >
@@ -199,24 +207,24 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
           </div>
           <div
             style={{
-              width: '42px',
-              height: '42px',
+              width: '40px',
+              height: '40px',
               borderRadius: '12px',
-              background: 'rgba(244, 63, 94, 0.15)',
+              background: 'rgba(255, 59, 48, 0.08)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              border: '1px solid rgba(244, 63, 94, 0.3)',
+              border: '1px solid rgba(255, 59, 48, 0.15)',
             }}
           >
-            <ShieldAlert size={20} color="#f43f5e" />
+            <ShieldAlert size={20} color="#ff3b30" />
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '14px', fontSize: '11px', color: '#fb7185' }}>
-          <CheckCircle2 size={13} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '14px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+          <Activity size={13} color="#248a3d" />
           <span>RBI Fair Practices Protection Active</span>
         </div>
-      </div>
+      </AntigravityCard>
     </div>
   );
 };

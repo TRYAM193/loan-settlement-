@@ -9,7 +9,6 @@ import {
   ShieldAlert,
   ChevronRight,
   User,
-  Filter,
 } from 'lucide-react';
 import { Lead, LeadSource } from '../lib/types';
 
@@ -39,25 +38,25 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onSelectLead, sea
     switch (source) {
       case 'google_business':
         return (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#60a5fa', fontSize: '12px', fontWeight: 600 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--accent-apple-blue)', fontSize: '12px', fontWeight: 600 }}>
             <Globe size={13} /> Google Business
           </span>
         );
       case 'whatsapp':
         return (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#34d399', fontSize: '12px', fontWeight: 600 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#248a3d', fontSize: '12px', fontWeight: 600 }}>
             <MessageSquare size={13} /> WhatsApp Inbound
           </span>
         );
       case 'inbound_call':
         return (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#f43f5e', fontSize: '12px', fontWeight: 600 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#ff3b30', fontSize: '12px', fontWeight: 600 }}>
             <PhoneCall size={13} /> Telephony Bridge
           </span>
         );
       default:
         return (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#a5b4fc', fontSize: '12px', fontWeight: 600 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600 }}>
             <Mail size={13} /> Direct Email
           </span>
         );
@@ -78,7 +77,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onSelectLead, sea
         }}
       >
         <div>
-          <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
             Ingested Client Directory
           </h3>
           <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
@@ -156,7 +155,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onSelectLead, sea
                   cursor: 'pointer',
                   transition: 'background 0.2s ease',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)')}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-pill)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
                 {/* Client info */}
@@ -167,7 +166,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onSelectLead, sea
                         width: '36px',
                         height: '36px',
                         borderRadius: '10px',
-                        background: 'rgba(255, 255, 255, 0.06)',
+                        background: 'var(--accent-apple-blue)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -179,10 +178,10 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onSelectLead, sea
                       {lead.fullName.charAt(0)}
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: '14px', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span>{lead.fullName}</span>
                         {lead.harassmentReported && (
-                          <ShieldAlert size={14} color="#f43f5e" />
+                          <ShieldAlert size={14} color="#ff3b30" />
                         )}
                       </div>
                       <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{lead.phone}</span>
@@ -194,14 +193,14 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onSelectLead, sea
                 <td style={{ padding: '14px' }}>{getSourceBadge(lead.source)}</td>
 
                 {/* Total Debt */}
-                <td style={{ padding: '14px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#fff', fontSize: '14px' }}>
+                <td style={{ padding: '14px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text-primary)', fontSize: '14px' }}>
                   ₹{lead.totalDebtAmount.toLocaleString('en-IN')}
                 </td>
 
                 {/* Assigned Rep */}
                 <td style={{ padding: '14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <User size={14} color="#a5b4fc" />
+                    <User size={14} color="var(--accent-apple-blue)" />
                     <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>
                       {lead.assignedEmployeeName || 'Unassigned'}
                     </span>

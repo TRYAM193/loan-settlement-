@@ -1,14 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Building2,
   PlusCircle,
-  Database,
-  UserCheck,
-  PhoneCall,
   Search,
-  ShieldCheck,
   LogOut,
   Lock,
 } from 'lucide-react';
@@ -31,17 +27,37 @@ export const Navbar: React.FC<NavbarProps> = ({
   searchQuery,
   setSearchQuery,
 }) => {
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('tryam_theme') as 'light' | 'dark' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(nextTheme);
+    localStorage.setItem('tryam_theme', nextTheme);
+    document.documentElement.setAttribute('data-theme', nextTheme);
+  };
+
   return (
     <header
       style={{
         position: 'sticky',
         top: 0,
         zIndex: 50,
-        background: 'rgba(9, 9, 11, 0.8)',
+        background: 'var(--bg-glass)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         borderBottom: '1px solid var(--border-subtle)',
         padding: '12px 28px',
+        transition: 'background-color 0.3s ease',
       }}
     >
       <div
@@ -55,20 +71,20 @@ export const Navbar: React.FC<NavbarProps> = ({
         }}
       >
         {/* Brand Logo & Telephony Status */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div
             style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '12px',
-              background: 'var(--accent-primary-gradient)',
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
+              background: 'var(--accent-apple-gradient)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
+              boxShadow: '0 2px 10px rgba(0, 113, 227, 0.3)',
             }}
           >
-            <Building2 size={22} color="#fff" />
+            <Building2 size={20} color="#fff" />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -77,9 +93,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   fontWeight: 700,
                   fontSize: '17px',
                   letterSpacing: '-0.3px',
-                  background: 'linear-gradient(180deg, #FFFFFF 0%, #CBD5E1 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  color: 'var(--text-primary)',
                 }}
               >
                 TRYAM CRM
@@ -87,23 +101,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span
                 style={{
                   fontSize: '10px',
-                  fontWeight: 700,
-                  background: 'rgba(99, 102, 241, 0.2)',
-                  color: '#a5b4fc',
+                  fontWeight: 600,
+                  background: 'var(--bg-pill)',
+                  color: 'var(--accent-apple-blue)',
                   padding: '2px 8px',
                   borderRadius: '999px',
-                  border: '1px solid rgba(99, 102, 241, 0.3)',
+                  border: '1px solid var(--border-subtle)',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
+                  letterSpacing: '0.4px',
                 }}
               >
                 Enterprise AI
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-              <span className="pulse-dot" style={{ background: '#10b981' }} />
+              <span className="spin" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34c759' }} />
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
-                Google & Telephony Ingestion Active
+                Live Telephony & Ingestion Active
               </span>
             </div>
           </div>
@@ -112,7 +126,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Global Search Input */}
         <div style={{ flex: 1, maxWidth: '420px', position: 'relative' }}>
           <Search
-            size={16}
+            size={15}
             color="var(--text-muted)"
             style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }}
           />
@@ -123,25 +137,45 @@ export const Navbar: React.FC<NavbarProps> = ({
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
               width: '100%',
-              background: 'rgba(255, 255, 255, 0.04)',
+              background: 'var(--bg-pill)',
               border: '1px solid var(--border-subtle)',
               borderRadius: '999px',
-              padding: '9px 16px 9px 40px',
+              padding: '9px 16px 9px 38px',
               color: 'var(--text-primary)',
               fontSize: '13px',
               outline: 'none',
               transition: 'all 0.2s ease',
             }}
-            onFocus={(e) => (e.target.style.borderColor = 'var(--accent-primary)')}
+            onFocus={(e) => (e.target.style.borderColor = 'var(--accent-apple-blue)')}
             onBlur={(e) => (e.target.style.borderColor = 'var(--border-subtle)')}
           />
         </div>
 
-        {/* Action Buttons & Auth Pill */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* Action Buttons & Theme Switcher */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Apple Light / Dark Theme Switcher Button */}
+          <button
+            onClick={toggleTheme}
+            className="btn-apple-secondary"
+            style={{ padding: '8px 12px', fontSize: '12px' }}
+            title={theme === 'light' ? 'Switch to Space Gray Dark Mode' : 'Switch to Apple Light Studio Mode'}
+          >
+            {theme === 'light' ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                <span>Space Gray</span>
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                <span>Light Studio</span>
+              </>
+            )}
+          </button>
+
           {/* New Lead Ingestion */}
           <button onClick={onOpenIngestModal} className="btn-apple-primary">
-            <PlusCircle size={17} />
+            <PlusCircle size={16} />
             <span>+ Ingest Lead</span>
           </button>
 
@@ -151,23 +185,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
-                background: 'rgba(255, 255, 255, 0.05)',
-                padding: '4px 12px 4px 6px',
+                gap: '8px',
+                background: 'var(--bg-pill)',
+                padding: '4px 10px 4px 6px',
                 borderRadius: '999px',
                 border: '1px solid var(--border-subtle)',
               }}
             >
               <div
                 style={{
-                  width: '28px',
-                  height: '28px',
+                  width: '26px',
+                  height: '26px',
                   borderRadius: '50%',
-                  background: 'var(--accent-emerald-gradient)',
+                  background: 'var(--accent-apple-blue)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '12px',
+                  fontSize: '11px',
                   fontWeight: 700,
                   color: '#fff',
                 }}
@@ -178,16 +212,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
                   {session.user.name}
                 </span>
-                <span style={{ fontSize: '10px', color: '#a5b4fc', textTransform: 'capitalize' }}>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
                   {session.user.role.replace('_', ' ')}
                 </span>
               </div>
               <button
                 onClick={onOpenAuthModal}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  color: '#e2e8f0',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-primary)',
                   cursor: 'pointer',
                   padding: '3px 8px',
                   borderRadius: '8px',
@@ -207,7 +241,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   color: 'var(--text-muted)',
                   cursor: 'pointer',
                   padding: '4px',
-                  marginLeft: '2px',
                   display: 'flex',
                 }}
                 title="Logout"
@@ -217,7 +250,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           ) : (
             <button onClick={onOpenAuthModal} className="btn-apple-secondary">
-              <Lock size={14} color="#f43f5e" />
+              <Lock size={14} color="#ff3b30" />
               <span>Login</span>
             </button>
           )}

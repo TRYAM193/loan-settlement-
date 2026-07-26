@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Sparkles, PhoneCall, MessageSquare, Mail, Globe, UserCheck, AlertTriangle } from 'lucide-react';
+import { X, Sparkles, PhoneCall, MessageSquare, Mail, Globe, UserCheck } from 'lucide-react';
 import { Employee, Lead, LeadSource } from '../lib/types';
 import { calculateBestEmployee } from '../lib/store';
 
@@ -88,8 +88,8 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
         position: 'fixed',
         inset: 0,
         zIndex: 100,
-        background: 'rgba(0, 0, 0, 0.8)',
-        backdropFilter: 'blur(16px)',
+        background: 'rgba(0, 0, 0, 0.4)',
+        backdropFilter: 'blur(12px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -102,12 +102,14 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
           width: '100%',
           maxWidth: '560px',
           padding: '28px',
-          background: 'linear-gradient(180deg, rgba(20, 21, 30, 0.95) 0%, rgba(12, 13, 19, 0.95) 100%)',
+          background: 'var(--bg-surface)',
           borderRadius: '24px',
           position: 'relative',
           maxHeight: '90vh',
           overflowY: 'auto',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
+          border: '1px solid var(--border-subtle)',
+          boxShadow: 'var(--card-shadow)',
+          color: 'var(--text-primary)',
         }}
       >
         <button
@@ -116,9 +118,9 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
             position: 'absolute',
             top: '20px',
             right: '20px',
-            background: 'rgba(255, 255, 255, 0.06)',
-            border: 'none',
-            color: 'var(--text-muted)',
+            background: 'var(--bg-pill)',
+            border: '1px solid var(--border-subtle)',
+            color: 'var(--text-secondary)',
             width: '32px',
             height: '32px',
             borderRadius: '50%',
@@ -134,8 +136,8 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
         {/* Title */}
         <div style={{ marginBottom: '22px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={20} color="#818cf8" />
-            <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>
+            <Sparkles size={20} color="var(--accent-apple-blue)" />
+            <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
               Ingest New Client Lead
             </h2>
           </div>
@@ -167,9 +169,9 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
                     style={{
                       padding: '10px 4px',
                       borderRadius: '12px',
-                      border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                      background: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                      color: isSelected ? '#fff' : 'var(--text-secondary)',
+                      border: isSelected ? '1px solid var(--accent-apple-blue)' : '1px solid var(--border-subtle)',
+                      background: isSelected ? 'rgba(0, 113, 227, 0.1)' : 'var(--bg-pill)',
+                      color: isSelected ? 'var(--accent-apple-blue)' : 'var(--text-secondary)',
                       fontSize: '11px',
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -179,7 +181,7 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
                       gap: '4px',
                     }}
                   >
-                    <IconComp size={16} color={isSelected ? '#818cf8' : 'var(--text-muted)'} />
+                    <IconComp size={16} color={isSelected ? 'var(--accent-apple-blue)' : 'var(--text-muted)'} />
                     <span>{item.label}</span>
                   </button>
                 );
@@ -201,11 +203,11 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
                 onChange={(e) => setFullName(e.target.value)}
                 style={{
                   width: '100%',
-                  background: 'rgba(0, 0, 0, 0.3)',
+                  background: 'var(--bg-pill)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: '10px',
                   padding: '10px 12px',
-                  color: '#fff',
+                  color: 'var(--text-primary)',
                   fontSize: '13px',
                   outline: 'none',
                 }}
@@ -224,11 +226,11 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
                 onChange={(e) => setPhone(e.target.value)}
                 style={{
                   width: '100%',
-                  background: 'rgba(0, 0, 0, 0.3)',
+                  background: 'var(--bg-pill)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: '10px',
                   padding: '10px 12px',
-                  color: '#fff',
+                  color: 'var(--text-primary)',
                   fontSize: '13px',
                   outline: 'none',
                 }}
@@ -248,11 +250,11 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
                 onChange={(e) => setDebtAmount(e.target.value)}
                 style={{
                   width: '100%',
-                  background: 'rgba(0, 0, 0, 0.3)',
+                  background: 'var(--bg-pill)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: '10px',
                   padding: '10px 12px',
-                  color: '#fff',
+                  color: 'var(--text-primary)',
                   fontSize: '13px',
                   outline: 'none',
                   fontFamily: 'var(--font-mono)',
@@ -269,11 +271,11 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
                 onChange={(e) => setDistressScore(e.target.value as any)}
                 style={{
                   width: '100%',
-                  background: 'rgba(0, 0, 0, 0.3)',
+                  background: 'var(--bg-pill)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: '10px',
                   padding: '10px 12px',
-                  color: '#fff',
+                  color: 'var(--text-primary)',
                   fontSize: '13px',
                   outline: 'none',
                 }}
@@ -293,9 +295,9 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
               id="harass"
               checked={harassment}
               onChange={(e) => setHarassment(e.target.checked)}
-              style={{ accentColor: 'var(--accent-rose)', width: '16px', height: '16px' }}
+              style={{ width: '16px', height: '16px' }}
             />
-            <label htmlFor="harass" style={{ fontSize: '12px', color: '#fda4af', cursor: 'pointer' }}>
+            <label htmlFor="harass" style={{ fontSize: '12px', color: '#ff3b30', cursor: 'pointer' }}>
               Flag Recovery Agent Workplace Harassment (Auto-Generate Legal Notice)
             </label>
           </div>
@@ -304,21 +306,21 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
           {bestAssignment && (
             <div
               style={{
-                background: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.3)',
+                background: 'var(--bg-pill)',
+                border: '1px solid var(--border-subtle)',
                 borderRadius: '14px',
                 padding: '14px',
                 marginBottom: '20px',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <UserCheck size={16} color="#818cf8" />
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#a5b4fc' }}>
+                <UserCheck size={16} color="var(--accent-apple-blue)" />
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--accent-apple-blue)' }}>
                   Smart Engine Lead Assignment Preview
                 </span>
               </div>
               <p style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 500 }}>
-                Will assign to <strong style={{ color: '#60a5fa' }}>{bestAssignment.employee.name}</strong> ({bestAssignment.employee.role.replace('_', ' ')})
+                Will assign to <strong style={{ color: 'var(--accent-apple-blue)' }}>{bestAssignment.employee.name}</strong> ({bestAssignment.employee.role.replace('_', ' ')})
               </p>
               <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
                 {bestAssignment.reason}
