@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, MessageSquare, X, Send, Key, Bot, User, RefreshCw, ChevronDown, Check, Shield } from 'lucide-react';
-import { Lead, Employee, Settlement } from '../lib/types';
+import { Lead, Employee, Settlement, UserSession } from '../lib/types';
 
 interface Message {
   id: string;
