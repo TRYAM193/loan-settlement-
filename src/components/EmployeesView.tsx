@@ -2,14 +2,15 @@
 
 import React from 'react';
 import { UserCheck, Shield, Phone, Mail, Award, CheckCircle2, Clock } from 'lucide-react';
-import { Employee, EmployeeStatus } from '../lib/types';
+import { Employee, EmployeeStatus, Lead } from '../lib/types';
 
 interface EmployeesViewProps {
   employees: Employee[];
-  onToggleStatus: (employeeId: string, newStatus: EmployeeStatus) => void;
+  onToggleStatus?: (employeeId: string, newStatus: EmployeeStatus) => void;
+  leads?: Lead[];
 }
 
-export const EmployeesView: React.FC<EmployeesViewProps> = ({ employees, onToggleStatus }) => {
+export const EmployeesView: React.FC<EmployeesViewProps> = ({ employees, onToggleStatus, leads }) => {
   return (
     <div>
       {/* Explanation Banner */}
@@ -92,7 +93,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ employees, onToggl
                 {/* Status Badge */}
                 <select
                   value={emp.status}
-                  onChange={(e) => onToggleStatus(emp.id, e.target.value as EmployeeStatus)}
+                  onChange={(e) => onToggleStatus && onToggleStatus(emp.id, e.target.value as EmployeeStatus)}
                   style={{
                     background:
                       emp.status === 'available'
