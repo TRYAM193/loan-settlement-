@@ -122,6 +122,17 @@ export default function Home() {
     );
   };
 
+  // Dynamically compute active caseload for 100% data integrity with live leads table
+  const syncedEmployees = employees.map((emp) => {
+    const actualActiveLeads = leads.filter(
+      (l) => l.assignedEmployeeId === emp.id && l.status !== 'settled'
+    ).length;
+    return {
+      ...emp,
+      activeCases: actualActiveLeads,
+    };
+  });
+
   // Determine current viewing mode
   const isAdmin = session.user?.role === 'admin';
   const loggedInEmpId = (session.user as any)?.employeeId || 'emp-101';
@@ -133,7 +144,7 @@ export default function Home() {
       : null
     : loggedInEmpId;
 
-  const activeEmployeeObj = employees.find((e) => e.id === activeEmployeeId) || null;
+  const activeEmployeeObj = syncedEmployees.find((e) => e.id === activeEmployeeId) || null;
 
   // Filter leads strictly for isolated employee view
   const isolatedEmployeeLeads = activeEmployeeId
@@ -220,7 +231,7 @@ export default function Home() {
                 style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '8px', background: '#161927', color: '#fff' }}
               >
                 <option value="master">All Employees (Global Agency Master)</option>
-                {employees.map((emp) => (
+                {syncedEmployees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
                     {emp.name} ({emp.activeCases} active cases)
                   </option>
@@ -254,7 +265,7 @@ export default function Home() {
             {/* Metrics Overview */}
             <MetricsOverview
               leads={displayedLeads}
-              employees={employees}
+              employees={syncedEmployees}
               settlements={settlements}
             />
 
@@ -305,7 +316,7 @@ export default function Home() {
                 }}
               >
                 <Users size={16} />
-                <span>Employee Staff Capacity & Status ({employees.length})</span>
+                <span>Employee Staff Capacity & Status ({syncedEmployees.length})</span>
               </button>
             </div>
 
@@ -318,19 +329,19 @@ export default function Home() {
               />
             ) : (
               <EmployeesView
-                employees={employees}
+                employees={syncedEmployees}
                 onToggleStatus={handleToggleEmployeeStatus}
               />
             )}
 
             {/* Admin AI Chatbot Assistant */}
-            <AdminChatbot leads={leads} employees={employees} />
+            <AdminChatbot leads={leads} employees={syncedEmployees} />
 
             {/* Admin Lead Drawer with Full Reassignment & Alert Controls */}
             <LeadDetailDrawer
               lead={selectedLead}
               onClose={() => setSelectedLead(null)}
-              employees={employees}
+              employees={syncedEmployees}
               onRefreshData={loadDatabaseData}
             />
           </div>
