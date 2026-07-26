@@ -51,13 +51,13 @@ export async function POST(req: NextRequest) {
         console.warn('[STORAGE WARNING]', storageErr.message);
       }
 
-      // 2. STT Engine (Primary #1: Sarvam AI Indian Languages Speech Model)
+      // 2. STT Engine (Speech-to-Text: Converts Audio Waves to Plain Raw Text Transcript)
       let sttProviderUsed = '';
 
       if (sarvamKey) {
-        // Option 1: Sarvam AI (saarika:v2 / saaras:v1) for Kannada, Hindi, Hinglish, Kanglish
+        // Option 1: Sarvam AI saarika:v2.5 (Kannada, Hindi, Hinglish, Kanglish Speech STT)
         try {
-          console.log('[STT] Transcribing via SARVAM AI Indian Languages Speech API...');
+          console.log('[STT] Transcribing via SARVAM AI saarika:v2.5 STT API...');
           const sarvamForm = new FormData();
           const blob = new Blob([buffer], { type: audioFile.type || 'audio/m4a' });
           sarvamForm.append('file', blob, 'recording.m4a');
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
           if (sarvamRes.ok) {
             const data = await sarvamRes.json() as { transcript: string };
             rawTranscript = data.transcript;
-            sttProviderUsed = 'Sarvam AI (saarika:v2)';
+            sttProviderUsed = 'Sarvam AI (saarika:v2.5)';
             console.log('[SARVAM STT SUCCESS]:', rawTranscript);
           } else {
             console.error('[SARVAM STT ERROR]', sarvamRes.status, await sarvamRes.text());
@@ -141,9 +141,65 @@ export async function POST(req: NextRequest) {
           console.error('[OPENAI STT EXCEPTION]', oaErr.message);
         }
       }
+
+      // 3. LLM Financial Extraction Engine (Parses Raw Text into Structured JSON Metrics)
+      if (rawTranscript && rawTranscript.length > 5 && !rawTranscript.includes('skipped')) {
+        try {
+          const llmApiKey = openaiKey || groqKey;
+          const llmEndpoint = openaiKey
+            ? 'https://api.openai.com/v1/chat/completions'
+            : 'https://api.groq.com/openai/v1/chat/completions';
+          const llmModel = openaiKey ? 'gpt-4o-mini' : 'llama-3.3-70b-versatile';
+
+          if (llmApiKey) {
+            console.log(`[LLM EXTRACTION] Parsing transcript via ${llmModel}...`);
+            const llmRes = await fetch(llmEndpoint, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${llmApiKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: llmModel,
+                messages: [
+                  {
+                    role: 'system',
+                    content: `You are an expert financial auditor for a debt settlement agency.
+Analyze the call transcript (which may be in Kannada, Hindi, Hinglish, or English) and extract structured metrics strictly in valid JSON format.
+
+JSON Schema:
+{
+  "lenders": ["string (e.g. HDFC Bank, SBI Credit, Bajaj Finance)"],
+  "total_debt": number (extract numeric debt amount in INR),
+  "default_duration_months": number,
+  "distress_score": "Low" | "Medium" | "High" | "Critical",
+  "harassment_reported": boolean,
+  "summary_bullets": ["string"]
+}`
+                  },
+                  {
+                    role: 'user',
+                    content: `Call Transcript:\n"${rawTranscript}"`
+                  }
+                ],
+                response_format: { type: 'json_object' }
+              })
+            });
+
+            if (llmRes.ok) {
+              const json = await llmRes.json() as any;
+              const parsed = JSON.parse(json.choices[0]?.message?.content || '{}');
+              aiExtraction = { ...aiExtraction, ...parsed };
+              console.log('[LLM EXTRACTION SUCCESS]:', aiExtraction);
+            }
+          }
+        } catch (llmErr: any) {
+          console.warn('[LLM EXTRACTION WARN]', llmErr.message);
+        }
+      }
     }
 
-    // 3. Dynamic Lead Assignment Algorithm
+    // 4. Dynamic Lead Assignment Algorithm
     let assignedEmployeeId: string | null = null;
     const { data: existingLeads } = await supabase
       .from('leads')
@@ -170,7 +226,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 4. Database Upsert
+    // 5. Database Upsert
     const { data: leadRecord } = await supabase
       .from('leads')
       .upsert({
