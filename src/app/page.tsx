@@ -146,12 +146,21 @@ export default function Home() {
 
   const activeEmployeeObj = syncedEmployees.find((e) => e.id === activeEmployeeId) || null;
 
+  // Dynamically resolve assignedEmployeeName from syncedEmployees for 100% data integrity
+  const syncedLeads = leads.map((l) => {
+    const assignedEmp = syncedEmployees.find((e) => e.id === l.assignedEmployeeId);
+    return {
+      ...l,
+      assignedEmployeeName: assignedEmp ? assignedEmp.name : (l.assignedEmployeeName || 'Unassigned'),
+    };
+  });
+
   // Filter leads strictly for isolated employee view
   const isolatedEmployeeLeads = activeEmployeeId
-    ? leads.filter((l) => l.assignedEmployeeId === activeEmployeeId)
+    ? syncedLeads.filter((l) => l.assignedEmployeeId === activeEmployeeId)
     : [];
 
-  const displayedLeads = leads.filter((lead) => {
+  const displayedLeads = syncedLeads.filter((lead) => {
     const matchesSearch =
       lead.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.phone.includes(searchQuery) ||
@@ -360,14 +369,14 @@ export default function Home() {
             {/* Metrics Overview for Employee */}
             <MetricsOverview
               leads={isolatedEmployeeLeads}
-              employees={employees}
+              employees={syncedEmployees}
               settlements={settlements}
             />
 
             {/* INTERACTIVE EMPLOYEE CLIENT CARDS & CENTER MODAL */}
             <EmployeeClientCards
               leads={isolatedEmployeeLeads}
-              employee={activeEmployeeObj || (employees[0] || null)}
+              employee={activeEmployeeObj || (syncedEmployees[0] || null)}
               onRefreshData={loadDatabaseData}
             />
           </div>
@@ -378,7 +387,7 @@ export default function Home() {
       <IngestLeadModal
         isOpen={isIngestModalOpen}
         onClose={() => setIsIngestModalOpen(false)}
-        employees={employees}
+        employees={syncedEmployees}
         onAddLead={handleAddLead}
       />
 
