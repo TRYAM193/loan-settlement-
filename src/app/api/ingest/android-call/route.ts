@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
           if (sarvamRes.ok) {
             const data = await sarvamRes.json() as { transcript: string };
             rawTranscript = data.transcript;
-            sttProviderUsed = 'Sarvam AI (saarika:v2.5)';
+            sttProviderUsed = 'TRYAM Regional Neural STT';
             console.log('[SARVAM STT SUCCESS]:', rawTranscript);
           } else {
             console.error('[SARVAM STT ERROR]', sarvamRes.status, await sarvamRes.text());
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
           if (groqRes.ok) {
             const data = await groqRes.json() as { text: string };
             rawTranscript = data.text;
-            sttProviderUsed = 'Groq Whisper-Large-v3 (FREE)';
+            sttProviderUsed = 'TRYAM Fast Voice STT';
             console.log('[GROQ STT SUCCESS]:', rawTranscript);
           } else {
             console.error('[GROQ STT ERROR]', groqRes.status, await groqRes.text());
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
           if (openaiRes.ok) {
             const data = await openaiRes.json() as { text: string };
             rawTranscript = data.text;
-            sttProviderUsed = 'OpenAI Whisper';
+            sttProviderUsed = 'TRYAM Secondary Voice STT';
           }
         } catch (oaErr: any) {
           console.error('[OPENAI STT EXCEPTION]', oaErr.message);
@@ -148,13 +148,11 @@ export async function POST(req: NextRequest) {
       if (rawTranscript && rawTranscript.length > 5 && !rawTranscript.includes('skipped')) {
         let extractedWithPrimary = false;
 
-        // Primary LLM: Google Gemini AI
-        if (geminiKey) {
-          const geminiResult = await extractFinancialMetricsWithGemini(rawTranscript, geminiKey);
-          if (geminiResult) {
-            aiExtraction = { ...aiExtraction, ...geminiResult };
-            extractedWithPrimary = true;
-          }
+        // Primary LLM: TRYAM Financial AI Engine
+        const geminiResult = await extractFinancialMetricsWithGemini(rawTranscript, geminiKey || '');
+        if (geminiResult) {
+          aiExtraction = { ...aiExtraction, ...geminiResult };
+          extractedWithPrimary = true;
         }
 
         // Fallback LLM: OpenAI / Groq

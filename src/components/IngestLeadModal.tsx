@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Sparkles, PhoneCall, MessageSquare, Mail, Globe, UserCheck, Mic, Play, FileText, CheckCircle2 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Sparkles, PhoneCall, MessageSquare, Mail, Globe, UserCheck, Upload, Mic, Loader2, FileText, CheckCircle2 } from 'lucide-react';
 import { Employee, Lead, LeadSource } from '../lib/types';
 import { calculateBestEmployee } from '../lib/store';
 
@@ -18,7 +18,7 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
   employees,
   onAddLead,
 }) => {
-  const [activeTab, setActiveTab] = useState<'manual' | 'call_simulation'>('call_simulation');
+  const [activeTab, setActiveTab] = useState<'call_simulation' | 'upload_audio' | 'manual'>('call_simulation');
   
   // Form fields
   const [fullName, setFullName] = useState('Ramesh Kumar');
@@ -30,10 +30,14 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
   const [harassment, setHarassment] = useState(true);
   const [notes, setNotes] = useState('Ingested via Sarvam AI saarika:v2.5 Kannada STT. Extracted HDFC & ICICI debt liabilities.');
 
-  // Call simulation state
+  // Call simulation & Audio Upload state
   const [selectedPreset, setSelectedPreset] = useState<'kannada_hdfc' | 'mumbai_sbi'>('kannada_hdfc');
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [sttSuccessMessage, setSttSuccessMessage] = useState<string | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState('');
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
@@ -89,49 +93,89 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
     if (!fullName || !phone) return;
 
     const assignedEmp = bestAssignment ? bestAssignment.employee : employees[0];
+    setIsProcessing(true);
 
     try {
-      const res = await fetch('/api/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName,
-          phone,
-          email: email || `${fullName.toLowerCase().replace(/\s+/g, '.')}@client.com`,
-          source,
-          totalDebtAmount: numDebt,
-          assignedEmployeeId: assignedEmp ? assignedEmp.id : undefined,
-          notes: notes || `Client logged via ${source.replace('_', ' ')}. Smart workload engine routed to ${assignedEmp ? assignedEmp.name : 'Team'}.`,
-        }),
-      });
+      if (audioFile && activeTab === 'upload_audio') {
+        setProcessingStatus('Uploading audio to Supabase Storage...');
+        const formData = new FormData();
+        formData.append('audio', audioFile);
+        formData.append('caller_phone', phone);
+        formData.append('agent_phone', assignedEmp?.phone || '+919876543210');
+        formData.append('duration', '0');
+        formData.append('full_name', fullName);
 
-      const json = await res.json();
-      if (json.success && json.data) {
-        onAddLead(
-          {
-            id: json.data.id,
-            fullName: json.data.full_name,
-            phone: json.data.phone,
-            email: json.data.email,
-            source: json.data.source,
-            status: json.data.status,
-            assignedEmployeeId: json.data.assigned_employee_id,
-            assignedEmployeeName: assignedEmp ? assignedEmp.name : 'Assigned Agent',
-            totalDebtAmount: Number(json.data.total_debt_amount || 0),
-            lenders: [
-              { name: harassment ? 'HDFC / ICICI Liabilities' : 'SBI / Bajaj Credit Line', amount: numDebt, type: 'Credit Debt' },
-            ],
-            distressScore,
-            harassmentReported: harassment,
-            createdAt: json.data.created_at || new Date().toISOString(),
-            notes: json.data.notes || notes,
-          },
-          assignedEmp ? assignedEmp.id : ''
-        );
+        setProcessingStatus('Transcribing call audio with Sarvam AI saarika:v2.5...');
+        const res = await fetch('/api/ingest/android-call', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const json = await res.json();
+        if (json.success) {
+          onAddLead(
+            {
+              id: json.data?.id || `lead-${Date.now()}`,
+              fullName: json.data?.full_name || fullName,
+              phone: json.data?.phone || phone,
+              email: json.data?.email || email || `${fullName.toLowerCase().replace(/\s+/g, '.')}@client.com`,
+              source: 'inbound_call',
+              status: json.data?.status || 'assigned',
+              assignedEmployeeId: json.data?.assigned_employee_id || assignedEmp?.id,
+              assignedEmployeeName: assignedEmp ? assignedEmp.name : 'Assigned Agent',
+              totalDebtAmount: Number(json.data?.total_debt_amount || numDebt),
+              lenders: [{ name: 'AI-Extracted Debt', amount: Number(json.data?.total_debt_amount || numDebt), type: 'Credit Debt' }],
+              distressScore: json.data?.distress_score || distressScore,
+              harassmentReported: json.data?.harassment_reported || harassment,
+              createdAt: json.data?.created_at || new Date().toISOString(),
+              notes: `STT Engine: ${json.sttProviderUsed || 'Sarvam AI saarika:v2.5'}. ${json.rawTranscript ? 'Transcript: ' + json.rawTranscript.substring(0, 100) + '...' : ''}`,
+            },
+            assignedEmp ? assignedEmp.id : ''
+          );
+        }
+      } else {
+        setProcessingStatus('Creating lead and routing to specialist...');
+        const res = await fetch('/api/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fullName,
+            phone,
+            email: email || `${fullName.toLowerCase().replace(/\s+/g, '.')}@client.com`,
+            source,
+            totalDebtAmount: numDebt,
+            assignedEmployeeId: assignedEmp ? assignedEmp.id : undefined,
+            notes: notes || `Client logged via ${source.replace('_', ' ')}. Smart workload engine routed to ${assignedEmp ? assignedEmp.name : 'Team'}.`,
+          }),
+        });
+
+        const json = await res.json();
+        if (json.success && json.data) {
+          onAddLead(
+            {
+              id: json.data.id,
+              fullName: json.data.full_name,
+              phone: json.data.phone,
+              email: json.data.email,
+              source: json.data.source,
+              status: json.data.status,
+              assignedEmployeeId: json.data.assigned_employee_id,
+              assignedEmployeeName: assignedEmp ? assignedEmp.name : 'Assigned Agent',
+              totalDebtAmount: Number(json.data.total_debt_amount || 0),
+              lenders: [{ name: harassment ? 'HDFC / ICICI Liabilities' : 'SBI / Bajaj Credit Line', amount: numDebt, type: 'Credit Debt' }],
+              distressScore,
+              harassmentReported: harassment,
+              createdAt: json.data.created_at || new Date().toISOString(),
+              notes: json.data.notes || notes,
+            },
+            assignedEmp ? assignedEmp.id : ''
+          );
+        }
       }
     } catch (err) {
       console.error('Failed to post new lead:', err);
     } finally {
+      setIsProcessing(false);
       onClose();
     }
   };
@@ -201,52 +245,72 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
         </div>
 
         {/* Tab Switcher */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', background: 'var(--bg-pill)', padding: '4px', borderRadius: '12px' }}>
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', background: 'var(--bg-pill)', padding: '4px', borderRadius: '12px' }}>
           <button
             type="button"
             onClick={() => setActiveTab('call_simulation')}
             style={{
               flex: 1,
-              padding: '8px 12px',
+              padding: '8px 6px',
               borderRadius: '9px',
               border: 'none',
               background: activeTab === 'call_simulation' ? 'var(--bg-surface)' : 'transparent',
               color: activeTab === 'call_simulation' ? 'var(--accent-apple-blue)' : 'var(--text-secondary)',
               fontWeight: activeTab === 'call_simulation' ? 700 : 500,
-              fontSize: '12px',
+              fontSize: '11px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px',
-              boxShadow: activeTab === 'call_simulation' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+              gap: '4px',
             }}
           >
-            <Mic size={15} />
-            <span>Simulate Customer Call Audio (STT AI)</span>
+            <Mic size={14} />
+            <span>Simulate Call (STT AI)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('upload_audio')}
+            style={{
+              flex: 1,
+              padding: '8px 6px',
+              borderRadius: '9px',
+              border: 'none',
+              background: activeTab === 'upload_audio' ? 'var(--bg-surface)' : 'transparent',
+              color: activeTab === 'upload_audio' ? 'var(--accent-apple-blue)' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'upload_audio' ? 700 : 500,
+              fontSize: '11px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+            }}
+          >
+            <Upload size={14} />
+            <span>Upload Audio File</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('manual')}
             style={{
               flex: 1,
-              padding: '8px 12px',
+              padding: '8px 6px',
               borderRadius: '9px',
               border: 'none',
               background: activeTab === 'manual' ? 'var(--bg-surface)' : 'transparent',
               color: activeTab === 'manual' ? 'var(--accent-apple-blue)' : 'var(--text-secondary)',
               fontWeight: activeTab === 'manual' ? 700 : 500,
-              fontSize: '12px',
+              fontSize: '11px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px',
-              boxShadow: activeTab === 'manual' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+              gap: '4px',
             }}
           >
-            <FileText size={15} />
-            <span>Manual Form Ingest</span>
+            <FileText size={14} />
+            <span>Manual Form</span>
           </button>
         </div>
 
@@ -268,7 +332,6 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
                   border: selectedPreset === 'kannada_hdfc' ? '2px solid var(--accent-apple-blue)' : '1px solid var(--border-subtle)',
                   background: selectedPreset === 'kannada_hdfc' ? 'rgba(0, 113, 227, 0.06)' : 'var(--bg-pill)',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
@@ -294,7 +357,6 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
                   border: selectedPreset === 'mumbai_sbi' ? '2px solid var(--accent-apple-blue)' : '1px solid var(--border-subtle)',
                   background: selectedPreset === 'mumbai_sbi' ? 'rgba(0, 113, 227, 0.06)' : 'var(--bg-pill)',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
@@ -327,51 +389,42 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          {/* Source Selection (Only shown in manual mode) */}
-          {activeTab === 'manual' && (
-            <div style={{ marginBottom: '18px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>
-                Lead Channel Source
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '6px' }}>
-                {[
-                  { id: 'google_business', label: 'Google', icon: Globe },
-                  { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare },
-                  { id: 'inbound_call', label: 'Call', icon: PhoneCall },
-                  { id: 'email', label: 'Email', icon: Mail },
-                ].map((item) => {
-                  const IconComp = item.icon;
-                  const isSelected = source === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setSource(item.id as LeadSource)}
-                      style={{
-                        padding: '10px 4px',
-                        borderRadius: '12px',
-                        border: isSelected ? '1px solid var(--accent-apple-blue)' : '1px solid var(--border-subtle)',
-                        background: isSelected ? 'rgba(0, 113, 227, 0.1)' : 'var(--bg-pill)',
-                        color: isSelected ? 'var(--accent-apple-blue)' : 'var(--text-secondary)',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <IconComp size={16} color={isSelected ? 'var(--accent-apple-blue)' : 'var(--text-muted)'} />
-                      <span>{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
+        {/* UPLOAD AUDIO TAB */}
+        {activeTab === 'upload_audio' && (
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>
+              Select Call Audio File (.m4a, .mp3, .wav)
+            </label>
+            <input
+              ref={audioInputRef}
+              type="file"
+              accept="audio/*"
+              style={{ display: 'none' }}
+              onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
+            />
+            <div
+              onClick={() => audioInputRef.current?.click()}
+              style={{
+                border: '2px dashed var(--border-subtle)',
+                borderRadius: '16px',
+                padding: '24px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                background: 'var(--bg-pill)',
+              }}
+            >
+              <Upload size={24} color="var(--accent-apple-blue)" style={{ margin: '0 auto 8px auto' }} />
+              <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {audioFile ? audioFile.name : 'Click to Upload Call Audio File'}
+              </p>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                Auto-transcribes via Sarvam AI saarika:v2.5 & stores in Supabase
+              </span>
             </div>
-          )}
+          </div>
+        )}
 
+        <form onSubmit={handleSubmit}>
           {/* Form Fields Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
             <div>
@@ -512,8 +565,16 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
             </div>
           )}
 
+          {isProcessing && (
+            <div style={{ padding: '10px', background: 'rgba(0, 113, 227, 0.08)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--accent-apple-blue)', marginBottom: '14px' }}>
+              <Loader2 size={16} className="spin" />
+              <span>{processingStatus}</span>
+            </div>
+          )}
+
           <button
             type="submit"
+            disabled={isProcessing}
             className="btn-apple-primary"
             style={{ width: '100%', justifyContent: 'center', padding: '12px' }}
           >

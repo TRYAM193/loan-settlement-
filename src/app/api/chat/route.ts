@@ -132,7 +132,7 @@ GUIDELINES:
           const replyText =
             geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ||
             'I have processed your query based on your authorized CRM metrics.';
-          return NextResponse.json({ success: true, reply: replyText, source: 'Gemini AI' });
+          return NextResponse.json({ success: true, reply: replyText, source: 'TRYAM Intelligence Engine' });
         }
       } catch (geminiErr: any) {
         console.error('Gemini API fetch error:', geminiErr);
