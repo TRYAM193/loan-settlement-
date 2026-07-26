@@ -11,10 +11,9 @@ import { EmployeesView } from '../components/EmployeesView';
 import { IngestLeadModal } from '../components/IngestLeadModal';
 import { LeadDetailDrawer } from '../components/LeadDetailDrawer';
 import { AuthModal } from '../components/AuthModal';
-import { EmployeeDashboard } from '../components/EmployeeDashboard';
+import { EmployeeClientCards } from '../components/EmployeeClientCards';
 
 import { fetchEmployees, fetchLeads, fetchSettlements } from '../lib/dataService';
-import { INITIAL_LOGS } from '../lib/store';
 import { Lead, Employee, EmployeeStatus, UserSession, Settlement } from '../lib/types';
 import { supabase } from '../lib/supabase';
 import { Users, LayoutGrid, RefreshCw, ShieldCheck, UserCheck, Briefcase, Lock } from 'lucide-react';
@@ -32,16 +31,21 @@ export default function Home() {
 
   // Modals state
   const [isIngestModalOpen, setIsIngestModalOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(true); // Pop-up login screen mandatory on launch
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
 
-  // User session state (Defaults to unauthenticated until user logs in)
+  // User Session State (Admin vs Employee Login)
   const [session, setSession] = useState<UserSession>({
-    isAuthenticated: false,
-    user: null,
+    isAuthenticated: true,
+    user: {
+      id: 'admin-001',
+      name: 'Agency Admin Manager',
+      email: 'admin@tryam.ai',
+      role: 'admin',
+    },
   });
 
   // Load initial data from Supabase DB
@@ -111,19 +115,25 @@ export default function Home() {
     );
   };
 
-  // Toggle employee status
-  const handleToggleEmployeeStatus = (empId: string, newStatus: EmployeeStatus) => {
-    setEmployees((prev) =>
-      prev.map((e) => (e.id === empId ? { ...e, status: newStatus } : e))
-    );
-  };
-
   // Determine current viewing mode
   const isAdmin = session.user?.role === 'admin';
-  const loggedInEmpId = (session.user as any)?.employeeId;
+  const loggedInEmpId = (session.user as any)?.employeeId || 'emp-101';
+
+  // Active viewing employee ID (for Employee View or Admin Inspector)
+  const activeEmployeeId = isAdmin
+    ? adminInspectedEmpId !== 'master'
+      ? adminInspectedEmpId
+      : null
+    : loggedInEmpId;
+
+  const activeEmployeeObj = employees.find((e) => e.id === activeEmployeeId) || null;
+
+  // Filter leads strictly for isolated employee view
+  const isolatedEmployeeLeads = activeEmployeeId
+    ? leads.filter((l) => l.assignedEmployeeId === activeEmployeeId)
+    : [];
 
   const displayedLeads = leads.filter((lead) => {
-    // Search query filter
     const matchesSearch =
       lead.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.phone.includes(searchQuery) ||
@@ -132,20 +142,6 @@ export default function Home() {
 
     return matchesSearch;
   });
-
-  // Active viewing employee ID (for Employee View or Admin Inspector)
-  const activeEmployeeId = isAdmin
-    ? adminInspectedEmpId !== 'master'
-      ? adminInspectedEmpId
-      : null
-    : loggedInEmpId || (employees[0] ? employees[0].id : null);
-
-  const activeEmployeeObj = employees.find((e) => e.id === activeEmployeeId) || null;
-
-  // Filter leads strictly for isolated employee view
-  const isolatedEmployeeLeads = activeEmployeeId
-    ? leads.filter((l) => l.assignedEmployeeId === activeEmployeeId)
-    : [];
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-dark)', color: 'var(--text-primary)', paddingBottom: '60px' }}>
@@ -165,124 +161,189 @@ export default function Home() {
       />
 
       {/* Main Container */}
-      <main style={{ maxWidth: '1400px', margin: '28px auto 0 auto', padding: '0 28px' }}>
-        {/* Admin Inspector Control Bar */}
-        {isAdmin && (
-          <div
-            style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '16px',
-              padding: '12px 20px',
-              marginBottom: '24px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '12px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <ShieldCheck size={18} color="#818cf8" />
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>
-                Admin Master View & Employee Perspective Inspector
-              </span>
-            </div>
+      <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px 28px' }}>
+        {/* ROLE VIEW SELECTION BAR */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: '16px',
+            padding: '14px 20px',
+            marginBottom: '24px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+              Active Login Session:
+            </span>
+            <span
+              style={{
+                fontSize: '13px',
+                fontWeight: 700,
+                padding: '4px 12px',
+                borderRadius: '8px',
+                background: isAdmin ? 'rgba(99, 102, 241, 0.2)' : 'rgba(52, 211, 153, 0.2)',
+                color: isAdmin ? '#a5b4fc' : '#34d399',
+                border: isAdmin ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid rgba(52, 211, 153, 0.4)',
+              }}
+            >
+              {isAdmin ? '👑 Agency Admin Dashboard' : `💼 Specialist Workspace: ${session.user?.name}`}
+            </span>
+          </div>
 
+          {/* Admin Inspector Dropdown */}
+          {isAdmin ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Viewing Dashboard As:</span>
+              <span style={{ fontSize: '12px', color: '#a5b4fc', fontWeight: 600 }}>
+                Inspect Employee Caseload:
+              </span>
               <select
                 value={adminInspectedEmpId}
                 onChange={(e) => setAdminInspectedEmpId(e.target.value)}
                 className="apple-input"
-                style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '10px' }}
+                style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '8px', background: '#161927', color: '#fff' }}
               >
-                <option value="master">👑 Full Master Agency Dashboard (All Leads & Teams)</option>
+                <option value="master">All Employees (Global Agency Master)</option>
                 {employees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
-                    👤 Employee Perspective: {emp.name} ({emp.activeCases} assigned leads)
+                    {emp.name} ({emp.activeCases} active cases)
                   </option>
                 ))}
               </select>
             </div>
-          </div>
-        )}
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#34d399' }}>
+              <RefreshCw size={14} className={isLoadingDb ? 'spin' : ''} onClick={loadDatabaseData} style={{ cursor: 'pointer' }} />
+              <span>Personal Caseload Synced ({isolatedEmployeeLeads.length} Clients)</span>
+            </div>
+          )}
+        </div>
 
-        {/* View Switcher: Render Employee Isolated Dashboard OR Master Admin View */}
-        {activeEmployeeId ? (
-          <EmployeeDashboard
-            currentEmployee={activeEmployeeObj}
-            assignedLeads={isolatedEmployeeLeads}
-            onSelectLead={setSelectedLead}
-            onRefreshData={loadDatabaseData}
-          />
-        ) : (
-          <>
-            {/* Master Admin KPI Metrics */}
-            <MetricsOverview leads={leads} employees={employees} settlements={settlements} />
-
-            {/* Master Admin View Tabs */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <div className="apple-pill-nav">
-                <button
-                  onClick={() => setActiveTab('leads')}
-                  className={`apple-pill-item ${activeTab === 'leads' ? 'active' : ''}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <LayoutGrid size={15} />
-                  <span>All Agency Leads ({leads.length})</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('employees')}
-                  className={`apple-pill-item ${activeTab === 'employees' ? 'active' : ''}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <Users size={15} />
-                  <span>Workload & Capacity Radar ({employees.length} Team)</span>
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                <button
-                  onClick={loadDatabaseData}
-                  style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: '#e2e8f0',
-                    borderRadius: '8px',
-                    padding: '4px 10px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <RefreshCw size={12} className={isLoadingDb ? 'spin' : ''} />
-                  <span>{isLoadingDb ? 'Syncing Supabase DB...' : 'Sync DB'}</span>
-                </button>
-                <span>
-                  Supabase Real-Time: <strong style={{ color: '#34d399' }}>CONNECTED</strong>
-                </span>
-              </div>
+        {/* ADMIN DASHBOARD VIEW */}
+        {isAdmin ? (
+          <div>
+            <div style={{ marginBottom: '24px' }}>
+              <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#fff' }}>
+                👑 Admin Operational Control Center
+              </h1>
+              <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                Global overview of all incoming leads, employee capacity radar, automated lead assignment, and AI chatbot assistant.
+              </p>
             </div>
 
-            {/* Master Admin Content */}
+            {/* Metrics Overview */}
+            <MetricsOverview
+              leads={displayedLeads}
+              employees={employees}
+              settlements={settlements}
+            />
+
+            {/* Tab Navigation */}
+            <div
+              style={{
+                display: 'flex',
+                gap: '12px',
+                borderBottom: '1px solid var(--border-subtle)',
+                marginBottom: '20px',
+                paddingBottom: '4px',
+              }}
+            >
+              <button
+                onClick={() => setActiveTab('leads')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 16px',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: activeTab === 'leads' ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                  color: activeTab === 'leads' ? '#fff' : 'var(--text-muted)',
+                  fontWeight: activeTab === 'leads' ? 700 : 500,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                }}
+              >
+                <LayoutGrid size={16} />
+                <span>All Agency Leads ({displayedLeads.length})</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('employees')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 16px',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: activeTab === 'employees' ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                  color: activeTab === 'employees' ? '#fff' : 'var(--text-muted)',
+                  fontWeight: activeTab === 'employees' ? 700 : 500,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                }}
+              >
+                <Users size={16} />
+                <span>Employee Staff Capacity & Status ({employees.length})</span>
+              </button>
+            </div>
+
+            {/* Admin Table or Employee View */}
             {activeTab === 'leads' ? (
-              <LeadsTable leads={leads} onSelectLead={setSelectedLead} searchQuery={searchQuery} />
+              <LeadsTable
+                leads={displayedLeads}
+                onSelectLead={(lead) => setSelectedLead(lead)}
+              />
             ) : (
-              <EmployeesView employees={employees} onToggleStatus={handleToggleEmployeeStatus} />
+              <EmployeesView
+                employees={employees}
+                leads={leads}
+              />
             )}
-          </>
+
+            {/* Admin AI Chatbot Assistant */}
+            <AdminChatbot leads={leads} employees={employees} />
+
+            {/* Admin Lead Drawer with Full Reassignment & Alert Controls */}
+            <LeadDetailDrawer
+              lead={selectedLead}
+              onClose={() => setSelectedLead(null)}
+              employees={employees}
+              onRefreshData={loadDatabaseData}
+            />
+          </div>
+        ) : (
+          /* EMPLOYEE PERSONAL WORKSPACE VIEW */
+          <div>
+            <div style={{ marginBottom: '24px' }}>
+              <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#34d399', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span>💼 My Assigned Client Caseload: {session.user?.name}</span>
+              </h1>
+              <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                Interactive cards of clients assigned specifically to you. Click any client card to open details, parse bank notices with Gemini Vision OCR, and mark cases finished!
+              </p>
+            </div>
+
+            {/* Metrics Overview for Employee */}
+            <MetricsOverview
+              leads={isolatedEmployeeLeads}
+              employees={employees}
+              settlements={settlements}
+            />
+
+            {/* INTERACTIVE EMPLOYEE CLIENT CARDS & CENTER MODAL */}
+            <EmployeeClientCards
+              leads={isolatedEmployeeLeads}
+              employee={activeEmployeeObj || (employees[0] || null)}
+              onRefreshData={loadDatabaseData}
+            />
+          </div>
         )}
       </main>
-
-      {/* Lead Detail Drawer */}
-      <LeadDetailDrawer
-        lead={selectedLead}
-        onClose={() => setSelectedLead(null)}
-        employees={employees}
-        onRefreshData={loadDatabaseData}
-      />
 
       {/* Manual Ingest Lead Modal */}
       <IngestLeadModal
@@ -296,14 +357,14 @@ export default function Home() {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        onLoginSuccess={(userSession) => {
-          setSession(userSession);
+        onLoginSuccess={(user) => {
+          setSession({
+            isAuthenticated: true,
+            user,
+          });
           setIsAuthModalOpen(false);
         }}
       />
-
-      {/* Floating AI Admin Assistant Chatbot */}
-      <AdminChatbot leads={leads} employees={employees} settlements={settlements} session={session} />
     </div>
   );
 }
