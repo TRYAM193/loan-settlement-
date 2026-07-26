@@ -147,7 +147,13 @@ export default function Home() {
       (lead.email && lead.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (lead.assignedEmployeeName && lead.assignedEmployeeName.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    return matchesSearch;
+    if (!matchesSearch) return false;
+
+    if (isAdmin && adminInspectedEmpId !== 'master') {
+      return lead.assignedEmployeeId === adminInspectedEmpId;
+    }
+
+    return true;
   });
 
   return (
@@ -234,10 +240,14 @@ export default function Home() {
           <div>
             <div style={{ marginBottom: '24px' }}>
               <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#fff' }}>
-                👑 Admin Operational Control Center
+                {adminInspectedEmpId !== 'master' && activeEmployeeObj
+                  ? `🔍 Inspecting Employee: ${activeEmployeeObj.name} (${displayedLeads.length} Assigned Leads)`
+                  : '👑 Admin Operational Control Center'}
               </h1>
               <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                Global overview of all incoming leads, employee capacity radar, automated lead assignment, and AI chatbot assistant.
+                {adminInspectedEmpId !== 'master' && activeEmployeeObj
+                  ? `Filtering agency CRM to display only ${activeEmployeeObj.name}'s active clients and assigned metrics.`
+                  : 'Global overview of all incoming leads, employee capacity radar, automated lead assignment, and AI chatbot assistant.'}
               </p>
             </div>
 
