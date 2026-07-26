@@ -297,11 +297,11 @@ export default function Home() {
               <LeadsTable
                 leads={displayedLeads}
                 onSelectLead={(lead) => setSelectedLead(lead)}
+                searchQuery={searchQuery}
               />
             ) : (
               <EmployeesView
                 employees={employees}
-                leads={leads}
               />
             )}
 
@@ -357,11 +357,8 @@ export default function Home() {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        onLoginSuccess={(user) => {
-          setSession({
-            isAuthenticated: true,
-            user,
-          });
+        onLoginSuccess={(s) => {
+          setSession(s);
           setIsAuthModalOpen(false);
         }}
       />
