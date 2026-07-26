@@ -8,13 +8,18 @@
 ## 🌟 Core Features Implemented
 
 ### 1. 🖥️ Dual Role Auth & Separate Dashboards (Admin vs Employee Workspace)
+* **🔐 Mandatory Launch Auth Pop-Up (`AuthModal`):**
+  * Application starts unauthenticated by default, automatically popping up the TRYAM Access Portal login screen on launch.
+  * Allows quick switching between **Admin Full Master Access** and individual **Employee Isolated Workspaces**.
 * **👑 Admin Master Control Center (`role: 'admin'`):**
-  * Displays total clients came, total assigned vs pending, overall debt portfolio (₹12.4M+), and settlement waivers.
+  * Displays total clients, assigned vs pending, overall debt portfolio (₹12.4M+), and settlement waivers.
   * **Live Employee Activity & Capacity Radar:** Real-time visibility into what every employee is doing, active caseloads, and status.
-  * **AI Admin Chatbot Assistant (`AdminChatbot`):** Built-in intelligent assistant to answer admin queries about agency caseloads, debt metrics, and employee performance.
+  * **Admin Inspector Dropdown:** Allows Admin to view the master agency dashboard or inspect what any individual employee sees.
+  * **AI Admin Chatbot Assistant (`AdminChatbot` / `/api/chat`):** Built-in intelligent assistant with full master access to agency metrics.
 * **💼 Employee Personal Workspace (`role: 'agent'` / `'senior_specialist'`):**
-  * Displays **ONLY clients assigned to that specific employee**.
-  * Shows personal active debt caseload, pending settlements, and client contact info.
+  * Displays **ONLY clients assigned to that specific employee** (Strict Data Privacy Isolation).
+  * **Role-Aware AI Assistant:** Restricted to answering queries strictly regarding that employee's assigned clients.
+  * **API Rate Limit (HTTP 429) & Quota Handling:** Displays a 1-2 minute busy notice if API rate limits are exceeded, with instant local DB intelligence fallback.
   * **🎉 "Client Case Finished / Settled" Action Button:**
     * Single-click completion button that updates client status to **`settled`** (Happy Customer).
     * Dispatches an automated **Celebration WhatsApp Message FROM the Main Company Master Number** directly to the client:
@@ -80,10 +85,16 @@ Ingests call audio from the Android app, uploads recording to Supabase Storage, 
 ### 2. `POST /api/ingest/document-ocr`
 Ingests bank notice / debt bill photos, runs Gemini 2.5 Flash Vision OCR, extracts lender & principal metrics, and creates a settlement record in Supabase.
 
-### 3. `POST /api/leads/assign`
+### 3. `POST /api/documents/analyze`
+WhatsApp Client Document Analyzer endpoint. Parses text excerpts or bank statement uploads, extracts lender liabilities, updates lead total debt amount, and stores audit logs in Supabase.
+
+### 4. `POST /api/chat`
+Role-aware AI Assistant endpoint with built-in HTTP 429 rate limit error handling and local DB fallback engine.
+
+### 5. `POST /api/leads/assign`
 Admin endpoint to reassign or approve an employee for a lead, triggering dual WhatsApp & Email notifications.
 
-### 4. `POST /api/leads/settle`
+### 6. `POST /api/leads/settle`
 Employee case completion endpoint to mark client case as **Settled (Happy Customer)**, update Supabase DB, and dispatch automated Celebration WhatsApp message from the Main Company Master Number.
 
 ---
