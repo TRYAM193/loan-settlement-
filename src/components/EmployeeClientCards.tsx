@@ -88,7 +88,7 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
 
       if (json.success) {
         setOcrSuccessMsg(
-          `✅ Gemini 2.5 Flash Vision parsed notice! Lender: ${json.parsedMetrics.lender_name}, Principal: ₹${json.parsedMetrics.original_principal.toLocaleString(
+          `✅ TRYAM Enterprise Vision AI parsed notice! Lender: ${json.parsedMetrics.lender_name}, Principal: ₹${json.parsedMetrics.original_principal.toLocaleString(
             'en-IN'
           )}, Target Waiver: ₹${json.parsedMetrics.target_settlement_amount.toLocaleString('en-IN')}.`
         );
@@ -322,16 +322,16 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
               </div>
             )}
 
-            {/* GEMINI VISION OCR BANK NOTICE PARSER */}
+            {/* TRYAM VISION OCR BANK NOTICE PARSER */}
             <div className="glass-card" style={{ padding: '16px', marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  📄 Gemini Vision OCR Notice Scanner
+                  📄 TRYAM Enterprise Vision Notice Scanner
                 </span>
                 {isUploadingOcr && <RefreshCw size={14} className="spin" color="var(--accent-apple-blue)" />}
               </div>
               <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                Upload any bank legal notice image/PDF. Gemini Flash will extract principal debt, interest, and target settlement waiver.
+                Upload any bank legal notice image/PDF. TRYAM Vision AI will extract principal debt, interest, and target settlement waiver.
               </p>
 
               <label
@@ -339,7 +339,7 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
                 style={{ cursor: 'pointer', display: 'inline-flex', width: '100%', justifyContent: 'center' }}
               >
                 <Upload size={14} />
-                <span>{isUploadingOcr ? 'Scanning with Gemini OCR...' : 'Upload Bank Legal Notice Image / PDF'}</span>
+                <span>{isUploadingOcr ? 'Scanning with TRYAM Vision AI...' : 'Upload Bank Legal Notice Image / PDF'}</span>
                 <input
                   type="file"
                   accept="image/*,.pdf"

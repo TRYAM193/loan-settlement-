@@ -374,7 +374,7 @@ export default function Home() {
                 <span>💼 My Assigned Client Caseload: {session.user?.name}</span>
               </h1>
               <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                Interactive cards of clients assigned specifically to you. Click any client card to open details, parse bank notices with Gemini Vision OCR, and mark cases finished!
+                Interactive cards of clients assigned specifically to you. Click any client card to open details, parse bank notices with TRYAM Enterprise Vision AI, and mark cases finished!
               </p>
             </div>
 

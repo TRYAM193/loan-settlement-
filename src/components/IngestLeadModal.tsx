@@ -54,13 +54,13 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
         formData.append('duration', '0');
         formData.append('full_name', fullName);
 
-        setProcessingStatus('Transcribing with Sarvam AI saarika:v2.5...');
+        setProcessingStatus('Transcribing call audio with TRYAM Neural STT...');
         const res = await fetch('/api/ingest/android-call', {
           method: 'POST',
           body: formData,
         });
 
-        setProcessingStatus('Extracting financial data with Gemini 2.5 Flash...');
+        setProcessingStatus('Extracting financial metrics with TRYAM Financial AI Engine...');
         const json = await res.json();
         if (json.success && json.data) {
           onAddLead(
@@ -78,7 +78,7 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
               distressScore: json.data.distress_score || distressScore,
               harassmentReported: json.data.harassment_reported || harassment,
               createdAt: json.data.created_at || new Date().toISOString(),
-              notes: `STT Engine: ${json.sttProvider || 'Sarvam AI'}. ${json.transcript ? 'Transcript: ' + json.transcript.substring(0, 100) + '...' : ''}`,
+              notes: `STT Engine: ${json.sttProvider || 'TRYAM Neural STT'}. ${json.transcript ? 'Transcript: ' + json.transcript.substring(0, 100) + '...' : ''}`,
             },
             json.data.assigned_employee_id || (assignedEmp ? assignedEmp.id : '')
           );
@@ -362,7 +362,7 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
             </button>
             {audioFile && (
               <p style={{ fontSize: '11px', color: 'var(--accent-apple-blue)', marginTop: '6px', fontWeight: 500 }}>
-                🧠 Will process: Sarvam AI STT → Gemini 2.5 Flash Extraction → Auto-Assignment
+                🧠 Will process: TRYAM Neural STT → Financial AI Extraction → Auto-Assignment
               </p>
             )}
           </div>

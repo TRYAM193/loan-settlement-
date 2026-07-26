@@ -90,25 +90,37 @@ export async function analyzeBankNoticeWithGemini(
 ): Promise<BankNoticeOCRResult | null> {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
 
-  const prompt = `You are an expert OCR financial auditor.
-Analyze the uploaded document image (Bank Notice, Credit Card Statement, Legal Demand Letter).
-Extract structured financial details strictly in valid JSON format matching the schema.
+  // Support pdf/image mime types smoothly
+  let formattedMimeType = mimeType || 'image/jpeg';
+  if (formattedMimeType.includes('pdf')) {
+    formattedMimeType = 'application/pdf';
+  }
+
+  const prompt = `You are an expert OCR financial auditor for a loan settlement agency in India.
+Analyze the uploaded document (Bank Legal Notice, Final Legal Notice for Loan Default, Credit Card Statement, Loan Agreement, NBFC Letter, etc.).
+Carefully read the document text and extract:
+1. "lender_name": The financial company, NBFC, or bank name (e.g. Si Creava Capital Services / Ring Pay, HDFC Bank, ICICI Bank, SBI, Bajaj Finance, Kissht, Navi, etc.).
+2. "account_number": The loan/facility account number or user reference ID (e.g. 2387549286).
+3. "original_principal": The pre-approved limit, total principal debt, or total credit limit in INR (numeric).
+4. "penalties_and_interest": Overdue interest, penalties, or charges in INR (numeric).
+5. "target_settlement_amount": Target settlement waiver calculation (35-45% of principal).
+6. "summary": A concise 1-sentence summary of the notice and demand.
 
 JSON Schema:
 {
-  "lender_name": "string (e.g. HDFC Bank, ICICI Bank, SBI Credit)",
-  "account_number": "string (e.g. XXXX-XXXX-1234)",
+  "lender_name": string,
+  "account_number": string,
   "original_principal": number,
   "penalties_and_interest": number,
-  "target_settlement_amount": number (calculate 35-45% of principal),
-  "summary": "string (short description of notice)"
+  "target_settlement_amount": number,
+  "summary": string
 }`;
 
   // Strip prefix if present
   const cleanBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
 
   try {
-    console.log('[GEMINI VISION OCR] Dispatching bank notice image to Gemini 2.5 Flash Vision...');
+    console.log('[TRYAM VISION OCR] Dispatching bank notice image to Enterprise Vision AI...');
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -119,7 +131,7 @@ JSON Schema:
               { text: prompt },
               {
                 inline_data: {
-                  mime_type: mimeType || 'image/jpeg',
+                  mime_type: formattedMimeType,
                   data: cleanBase64,
                 },
               },
