@@ -1,6 +1,6 @@
 export type Role = 'admin' | 'senior_specialist' | 'agent';
 
-export type EmployeeStatus = 'available' | 'on_call' | 'away' | 'offline';
+export type EmployeeStatus = 'available' | 'on_call' | 'busy' | 'away' | 'offline';
 
 export interface Employee {
   id: string;

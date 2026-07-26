@@ -100,15 +100,18 @@ export default function Home() {
     setLeads((prev) => [newLead, ...prev]);
 
     setEmployees((prev) =>
-      prev.map((emp) =>
-        emp.id === assignedEmpId
-          ? {
-              ...emp,
-              activeCases: emp.activeCases + 1,
-              status: emp.activeCases + 1 >= emp.maxCapacity ? 'busy' : emp.status,
-            }
-          : emp
-      )
+      prev.map((emp): Employee => {
+        if (emp.id === assignedEmpId) {
+          const newActiveCases = emp.activeCases + 1;
+          const newStatus: EmployeeStatus = newActiveCases >= emp.maxCapacity ? 'busy' : emp.status;
+          return {
+            ...emp,
+            activeCases: newActiveCases,
+            status: newStatus,
+          };
+        }
+        return emp;
+      })
     );
   };
 
