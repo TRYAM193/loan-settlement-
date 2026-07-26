@@ -115,6 +115,13 @@ export default function Home() {
     );
   };
 
+  // Toggle employee status
+  const handleToggleEmployeeStatus = (empId: string, newStatus: EmployeeStatus) => {
+    setEmployees((prev) =>
+      prev.map((e) => (e.id === empId ? { ...e, status: newStatus } : e))
+    );
+  };
+
   // Determine current viewing mode
   const isAdmin = session.user?.role === 'admin';
   const loggedInEmpId = (session.user as any)?.employeeId || 'emp-101';
