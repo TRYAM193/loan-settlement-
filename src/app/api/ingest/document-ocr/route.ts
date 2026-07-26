@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { analyzeBankNoticeWithGemini } from '@/lib/geminiService';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://asednemwscdtetqwwuts.supabase.co';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_abUml6si1hpQxE-H2K1NNA_TxdSXSVm';
@@ -21,13 +22,12 @@ export async function POST(req: NextRequest) {
 
     console.log(`[DOCUMENT OCR] Processing bank notice image (Size: ${documentFile.size} bytes)...`);
 
-    // 1. Convert Image File to Base64 Data URL for GPT-4o-mini Vision
+    // 1. Convert Image File to Base64 Data URL
     const buffer = Buffer.from(await documentFile.arrayBuffer());
     const mimeType = documentFile.type || 'image/jpeg';
     const base64Data = buffer.toString('base64');
-    const imageUrl = `data:${mimeType};base64,${base64Data}`;
 
-    // 2. Upload Document to Supabase Storage ('bank-notices')
+    // 2. Upload Document to Supabase Storage ('call-recordings')
     let storedDocUrl: string | null = null;
     const fileName = `notices/${Date.now()}_${(clientPhone || 'doc').replace(/[^0-9]/g, '')}.${mimeType.split('/')[1] || 'jpg'}`;
 
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       targetLead = data;
     }
 
-    // 4. GPT-4o-mini Vision Parsing Engine
+    // 4. Primary Vision OCR Engine: Google Gemini 2.5 Flash Vision
     let ocrParsedData = {
       lender_name: 'Unknown Lender',
       account_number: 'N/A',
@@ -66,15 +66,25 @@ export async function POST(req: NextRequest) {
       summary: 'Bank notice processed via Vision OCR.',
     };
 
-    const apiKey = process.env.OPENAI_API_KEY || process.env.GROQ_API_KEY;
+    const geminiKey = process.env.GEMINI_API_KEY;
+    let parsedWithGemini = false;
 
-    if (apiKey && process.env.OPENAI_API_KEY) {
+    if (geminiKey) {
+      const geminiOcrRes = await analyzeBankNoticeWithGemini(base64Data, mimeType, geminiKey);
+      if (geminiOcrRes) {
+        ocrParsedData = { ...ocrParsedData, ...geminiOcrRes };
+        parsedWithGemini = true;
+      }
+    }
+
+    // Fallback Vision OCR: GPT-4o-mini Vision
+    if (!parsedWithGemini && process.env.OPENAI_API_KEY) {
       try {
-        console.log('[GPT-4o-mini VISION] Querying Vision model for Bank Notice OCR...');
+        console.log('[GPT-4o-mini VISION] Querying Vision fallback for Bank Notice OCR...');
         const visionRes = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${apiKey}`,
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -84,23 +94,13 @@ export async function POST(req: NextRequest) {
                 role: 'system',
                 content: `You are an expert OCR financial auditor.
 Analyze the uploaded document image (Bank Notice, Credit Card Statement, Legal Demand Letter).
-Extract structured financial details strictly in valid JSON format.
-
-JSON Schema:
-{
-  "lender_name": "string (e.g. HDFC Bank, ICICI Bank, SBI Credit)",
-  "account_number": "string (e.g. XXXX-XXXX-1234)",
-  "original_principal": number,
-  "penalties_and_interest": number,
-  "target_settlement_amount": number (calculate 35-45% of principal),
-  "summary": "string (short description of notice)"
-}`,
+Extract structured financial details strictly in valid JSON format matching schema.`,
               },
               {
                 role: 'user',
                 content: [
-                  { type: 'text', text: 'Extract bank notice financial metrics from this document:' },
-                  { type: 'image_url', image_url: { url: imageUrl } },
+                  { type: 'text', text: 'Extract bank notice financial metrics:' },
+                  { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Data}` } },
                 ],
               },
             ],
@@ -112,12 +112,9 @@ JSON Schema:
           const json = await visionRes.json();
           const parsed = JSON.parse(json.choices[0]?.message?.content || '{}');
           ocrParsedData = { ...ocrParsedData, ...parsed };
-          console.log('[VISION OCR SUCCESS]:', ocrParsedData);
-        } else {
-          console.error('[VISION OCR API ERROR]', visionRes.status, await visionRes.text());
         }
       } catch (ocrErr: any) {
-        console.error('[VISION OCR EXCEPTION]', ocrErr.message);
+        console.warn('[GPT VISION FALLBACK WARN]', ocrErr.message);
       }
     }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { extractFinancialMetricsWithGemini } from '@/lib/geminiService';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://asednemwscdtetqwwuts.supabase.co';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_abUml6si1hpQxE-H2K1NNA_TxdSXSVm';
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest) {
       summary_bullets: ["Inbound call ingested via Android app."]
     };
 
+    const geminiKey = process.env.GEMINI_API_KEY;
     const sarvamKey = process.env.SARVAM_API_KEY;
     const groqKey = process.env.GROQ_API_KEY;
     const openaiKey = process.env.OPENAI_API_KEY;
@@ -142,59 +144,73 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // 3. LLM Financial Extraction Engine (Parses Raw Text into Structured JSON Metrics)
+      // 3. LLM Financial Extraction Engine (Primary: Google Gemini AI -> Fallbacks: OpenAI / Groq)
       if (rawTranscript && rawTranscript.length > 5 && !rawTranscript.includes('skipped')) {
-        try {
-          const llmApiKey = openaiKey || groqKey;
-          const llmEndpoint = openaiKey
-            ? 'https://api.openai.com/v1/chat/completions'
-            : 'https://api.groq.com/openai/v1/chat/completions';
-          const llmModel = openaiKey ? 'gpt-4o-mini' : 'llama-3.3-70b-versatile';
+        let extractedWithPrimary = false;
 
-          if (llmApiKey) {
-            console.log(`[LLM EXTRACTION] Parsing transcript via ${llmModel}...`);
-            const llmRes = await fetch(llmEndpoint, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${llmApiKey}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                model: llmModel,
-                messages: [
-                  {
-                    role: 'system',
-                    content: `You are an expert financial auditor for a debt settlement agency.
-Analyze the call transcript (which may be in Kannada, Hindi, Hinglish, or English) and extract structured metrics strictly in valid JSON format.
-
-JSON Schema:
-{
-  "lenders": ["string (e.g. HDFC Bank, SBI Credit, Bajaj Finance)"],
-  "total_debt": number (extract numeric debt amount in INR),
-  "default_duration_months": number,
-  "distress_score": "Low" | "Medium" | "High" | "Critical",
-  "harassment_reported": boolean,
-  "summary_bullets": ["string"]
-}`
-                  },
-                  {
-                    role: 'user',
-                    content: `Call Transcript:\n"${rawTranscript}"`
-                  }
-                ],
-                response_format: { type: 'json_object' }
-              })
-            });
-
-            if (llmRes.ok) {
-              const json = await llmRes.json() as any;
-              const parsed = JSON.parse(json.choices[0]?.message?.content || '{}');
-              aiExtraction = { ...aiExtraction, ...parsed };
-              console.log('[LLM EXTRACTION SUCCESS]:', aiExtraction);
-            }
+        // Primary LLM: Google Gemini AI
+        if (geminiKey) {
+          const geminiResult = await extractFinancialMetricsWithGemini(rawTranscript, geminiKey);
+          if (geminiResult) {
+            aiExtraction = { ...aiExtraction, ...geminiResult };
+            extractedWithPrimary = true;
           }
-        } catch (llmErr: any) {
-          console.warn('[LLM EXTRACTION WARN]', llmErr.message);
+        }
+
+        // Fallback LLM: OpenAI / Groq
+        if (!extractedWithPrimary) {
+          try {
+            const llmApiKey = openaiKey || groqKey;
+            const llmEndpoint = openaiKey
+              ? 'https://api.openai.com/v1/chat/completions'
+              : 'https://api.groq.com/openai/v1/chat/completions';
+            const llmModel = openaiKey ? 'gpt-4o-mini' : 'llama-3.3-70b-versatile';
+
+            if (llmApiKey) {
+              console.log(`[LLM FALLBACK EXTRACTION] Parsing transcript via ${llmModel}...`);
+              const llmRes = await fetch(llmEndpoint, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${llmApiKey}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  model: llmModel,
+                  messages: [
+                    {
+                      role: 'system',
+                      content: `You are an expert financial auditor for a debt settlement agency.
+  Analyze the call transcript (which may be in Kannada, Hindi, Hinglish, or English) and extract structured metrics strictly in valid JSON format.
+
+  JSON Schema:
+  {
+    "lenders": ["string (e.g. HDFC Bank, SBI Credit, Bajaj Finance)"],
+    "total_debt": number (extract numeric debt amount in INR),
+    "default_duration_months": number,
+    "distress_score": "Low" | "Medium" | "High" | "Critical",
+    "harassment_reported": boolean,
+    "summary_bullets": ["string"]
+  }`
+                    },
+                    {
+                      role: 'user',
+                      content: `Call Transcript:\n"${rawTranscript}"`
+                    }
+                  ],
+                  response_format: { type: 'json_object' }
+                })
+              });
+
+              if (llmRes.ok) {
+                const json = await llmRes.json() as any;
+                const parsed = JSON.parse(json.choices[0]?.message?.content || '{}');
+                aiExtraction = { ...aiExtraction, ...parsed };
+                console.log('[LLM FALLBACK SUCCESS]:', aiExtraction);
+              }
+            }
+          } catch (llmErr: any) {
+            console.warn('[LLM FALLBACK WARN]', llmErr.message);
+          }
         }
       }
     }
