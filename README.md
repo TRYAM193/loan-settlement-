@@ -7,6 +7,12 @@
 
 ## 🌟 Core Features Implemented
 
+### 0. 🎨 Google / Apple / Amazon-Level Glassmorphic Design System
+* **✨ Apple Dark Glassmorphic Aesthetic (`globals.css`):** Multi-layered glass depth (`backdrop-filter: blur(28px)`), radial ambient lighting blobs, subtle 1px border glows, and 60fps spring transitions (`cubic-bezier(0.16, 1, 0.3, 1)`).
+* **🔤 Google Outfit & Inter Typography:** Premium font pairing (`Outfit`, `Inter`, `JetBrains Mono`) for numbers, debt values, and metrics.
+* **📊 Apple Fitness-Style Metric Cards (`MetricsOverview.tsx`):** KPI cards with gradient progress rings, trend indicators (+14.2% MoM), and glowing badges.
+* **💼 Enhanced Scannable Lead Directory (`LeadsTable.tsx`):** Interactive channel filter pills (*Google*, *WhatsApp*, *Calls*, *Email*, *Harassment Flagged*), hover elevations, and status badges.
+
 ### 1. 🖥️ Dual Role Auth & Separate Dashboards (Admin vs Employee Workspace)
 * **🔐 Mandatory Launch Auth Pop-Up (`AuthModal`):**
   * Application starts unauthenticated by default, automatically popping up the TRYAM Access Portal login screen on launch.
