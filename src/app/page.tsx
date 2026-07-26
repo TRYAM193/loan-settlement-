@@ -302,6 +302,7 @@ export default function Home() {
             ) : (
               <EmployeesView
                 employees={employees}
+                onToggleStatus={handleToggleEmployeeStatus}
               />
             )}
 
