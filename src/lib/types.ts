@@ -40,13 +40,28 @@ export interface Lead {
 export interface LeadLog {
   id: string;
   leadId: string;
-  leadName: string;
+  leadName?: string;
   employeeId?: string;
-  channel: LeadSource;
+  channel: LeadSource | 'document';
   recordingUrl?: string;
   transcript?: string;
+  rawTranscript?: string;
   aiSummary: string;
-  sentiment: 'Distressed' | 'Urgent' | 'Neutral' | 'Cooperative';
+  sentiment: 'Distressed' | 'Urgent' | 'Neutral' | 'Cooperative' | 'Assigned';
+  createdAt: string;
+}
+
+export interface AnalyzedDocument {
+  id: string;
+  leadId: string;
+  clientName: string;
+  employeeId: string;
+  fileName: string;
+  documentType: 'bank_statement' | 'legal_notice' | 'loan_agreement' | 'cibil_report' | 'general';
+  extractedLenders: Array<{ name: string; amount: number; overdue: boolean }>;
+  totalExtractedDebt: number;
+  summary: string;
+  documentUrl: string;
   createdAt: string;
 }
 
@@ -69,5 +84,6 @@ export interface UserSession {
     name: string;
     email: string;
     role: Role;
+    employeeId?: string;
   } | null;
 }

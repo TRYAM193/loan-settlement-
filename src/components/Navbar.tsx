@@ -183,6 +183,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </div>
               <button
+                onClick={onOpenAuthModal}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  color: '#e2e8f0',
+                  cursor: 'pointer',
+                  padding: '3px 8px',
+                  borderRadius: '8px',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  marginLeft: '4px',
+                }}
+                title="Switch Role or Login Account"
+              >
+                Switch
+              </button>
+              <button
                 onClick={onLogout}
                 style={{
                   background: 'transparent',
@@ -190,7 +207,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   color: 'var(--text-muted)',
                   cursor: 'pointer',
                   padding: '4px',
-                  marginLeft: '4px',
+                  marginLeft: '2px',
                   display: 'flex',
                 }}
                 title="Logout"

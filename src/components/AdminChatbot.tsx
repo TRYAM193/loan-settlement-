@@ -16,9 +16,15 @@ interface AdminChatbotProps {
   leads?: Lead[];
   employees?: Employee[];
   settlements?: Settlement[];
+  session?: UserSession;
 }
 
-export const AdminChatbot: React.FC<AdminChatbotProps> = ({ leads = [], employees = [], settlements = [] }) => {
+export const AdminChatbot: React.FC<AdminChatbotProps> = ({
+  leads = [],
+  employees = [],
+  settlements = [],
+  session,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -70,6 +76,8 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({ leads = [], employee
           message: query,
           history: messages.map((m) => ({ role: m.role, content: m.content })),
           customApiKey: customApiKey.trim(),
+          userRole: session?.user?.role || 'admin',
+          userEmployeeId: session?.user?.employeeId || '',
         }),
       });
 

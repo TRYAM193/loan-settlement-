@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, ShieldCheck, Lock, User, ArrowRight, CheckCircle } from 'lucide-react';
+import { X, ShieldCheck, Lock, User, ArrowRight, CheckCircle, Briefcase } from 'lucide-react';
 import { Role, UserSession } from '../lib/types';
 
 interface AuthModalProps {
@@ -11,40 +11,57 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
-  const [selectedRole, setSelectedRole] = useState<Role>('admin');
+  const [selectedRole, setSelectedRole] = useState<'admin' | 'employee'>('admin');
   const [email, setEmail] = useState('admin@tryam.ai');
   const [password, setPassword] = useState('••••••••');
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const handleRoleSelect = (role: Role) => {
-    setSelectedRole(role);
-    if (role === 'admin') setEmail('admin@tryam.ai');
-    if (role === 'senior_specialist') setEmail('rahul.s@tryam.ai');
-    if (role === 'agent') setEmail('priya.p@tryam.ai');
-  };
+  const demoAccounts = [
+    { name: 'Agency Admin Manager', email: 'admin@tryam.ai', role: 'admin' as const, empId: '' },
+    { name: 'Rahul Verma (Agent)', email: 'rahul@tryam.com', role: 'agent' as const, empId: '42e8b5fe-5944-458a-a613-49f5353d817c' },
+    { name: 'Ananya Sharma (Agent)', email: 'ananya@tryam.com', role: 'agent' as const, empId: '6952a142-bb92-4773-91ab-153abc2c9b52' },
+    { name: 'Vijay Kumar (Agent)', email: 'vijay@tryam.com', role: 'agent' as const, empId: 'e1f8fc4c-9dd9-4f7b-8e94-b3d6ce5bcec0' },
+  ];
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) {
-      setError('Please enter your work email');
-      return;
-    }
-
-    const nameMap: Record<Role, string> = {
-      admin: 'Agency Admin Manager',
-      senior_specialist: 'Rahul Sharma (Senior Rep)',
-      agent: 'Priya Patel (Agent)',
-    };
+  const handleSelectAccount = (acc: typeof demoAccounts[0]) => {
+    setSelectedRole(acc.role === 'admin' ? 'admin' : 'employee');
+    setEmail(acc.email);
+    setError('');
 
     onLoginSuccess({
       isAuthenticated: true,
       user: {
-        id: selectedRole === 'admin' ? 'admin-001' : selectedRole === 'senior_specialist' ? 'emp-101' : 'emp-102',
-        name: nameMap[selectedRole],
-        email: email,
-        role: selectedRole,
+        id: acc.empId || 'admin-001',
+        name: acc.name,
+        email: acc.email,
+        role: acc.role,
+        employeeId: acc.empId,
+      },
+    });
+
+    onClose();
+  };
+
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setError('Please enter work email');
+      return;
+    }
+
+    const matched = demoAccounts.find((a) => a.email.toLowerCase() === email.toLowerCase());
+    const isEmp = email.includes('rahul') || email.includes('ananya') || email.includes('vijay') || email.includes('@tryam.com');
+
+    onLoginSuccess({
+      isAuthenticated: true,
+      user: {
+        id: matched?.empId || 'user-id',
+        name: matched?.name || (isEmp ? 'Employee Specialist' : 'Agency Admin'),
+        email,
+        role: isEmp ? 'agent' : 'admin',
+        employeeId: matched?.empId || (isEmp ? '42e8b5fe-5944-458a-a613-49f5353d817c' : undefined),
       },
     });
 
@@ -69,7 +86,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
         className="glass-card animate-fade-in"
         style={{
           width: '100%',
-          maxWidth: '440px',
+          maxWidth: '460px',
           padding: '32px',
           background: 'linear-gradient(180deg, rgba(24, 25, 35, 0.95) 0%, rgba(14, 15, 22, 0.95) 100%)',
           borderRadius: '24px',
@@ -99,135 +116,126 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
         </button>
 
         {/* Modal Header */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div
             style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '18px',
+              width: '52px',
+              height: '52px',
+              borderRadius: '16px',
               background: 'var(--accent-primary-gradient)',
-              margin: '0 auto 16px auto',
+              margin: '0 auto 14px auto',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               boxShadow: '0 10px 25px rgba(99, 102, 241, 0.4)',
             }}
           >
-            <ShieldCheck size={28} color="#fff" />
+            <ShieldCheck size={26} color="#fff" />
           </div>
-          <h2 style={{ fontSize: '22px', fontWeight: 700, letterSpacing: '-0.4px', color: '#fff' }}>
-            TRYAM AI Access Portal
+          <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.4px', color: '#fff' }}>
+            TRYAM Access Portal
           </h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '6px' }}>
-            Enterprise Loan Settlement CRM & Lead Engine
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+            Role-Based Authentication & Client Data Isolation
           </p>
         </div>
 
-        {/* Role Selector Tabs */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Select Access Role
+        {/* 1-Click Quick Preset Account Buttons */}
+        <div style={{ marginBottom: '22px' }}>
+          <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>
+            Quick Account Switch (Test Login)
           </label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-            {(['admin', 'senior_specialist', 'agent'] as Role[]).map((role) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {demoAccounts.map((acc) => (
               <button
-                key={role}
+                key={acc.email}
                 type="button"
-                onClick={() => handleRoleSelect(role)}
+                onClick={() => handleSelectAccount(acc)}
                 style={{
-                  padding: '10px 6px',
+                  padding: '10px 14px',
                   borderRadius: '12px',
-                  border: selectedRole === role ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                  background: selectedRole === role ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                  color: selectedRole === role ? '#fff' : 'var(--text-secondary)',
-                  fontSize: '11px',
-                  fontWeight: 600,
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: acc.role === 'admin' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 500,
                   cursor: 'pointer',
-                  textAlign: 'center',
-                  transition: 'all 0.2s ease',
                   display: 'flex',
-                  flexDirection: 'column',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
-                  gap: '4px',
                 }}
               >
-                {selectedRole === role && <CheckCircle size={12} color="#818cf8" />}
-                <span>
-                  {role === 'admin' ? 'Admin' : role === 'senior_specialist' ? 'Senior Rep' : 'Agent'}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {acc.role === 'admin' ? <ShieldCheck size={15} color="#818cf8" /> : <Briefcase size={15} color="#38bdf8" />}
+                  <span>{acc.name}</span>
+                </div>
+                <span style={{ fontSize: '10px', color: acc.role === 'admin' ? '#818cf8' : '#38bdf8', fontWeight: 700 }}>
+                  {acc.role === 'admin' ? 'FULL MASTER' : 'ISOLATED'}
                 </span>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Form Inputs */}
-        <form onSubmit={handleLogin}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-              Work Email
+        {/* Manual Login Form */}
+        <form onSubmit={handleLoginSubmit}>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+              Work Email Address
             </label>
-            <div style={{ position: 'relative' }}>
-              <User size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '12px',
-                  padding: '11px 12px 11px 36px',
-                  color: '#fff',
-                  fontSize: '13px',
-                  outline: 'none',
-                }}
-              />
-            </div>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={{
+                width: '100%',
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '10px',
+                padding: '9px 12px',
+                color: '#fff',
+                fontSize: '13px',
+                outline: 'none',
+              }}
+            />
           </div>
 
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-              Security Passcode / PIN
+          <div style={{ marginBottom: '18px' }}>
+            <label style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+              Password / Passcode
             </label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '12px',
-                  padding: '11px 12px 11px 36px',
-                  color: '#fff',
-                  fontSize: '13px',
-                  outline: 'none',
-                }}
-              />
-            </div>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{
+                width: '100%',
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '10px',
+                padding: '9px 12px',
+                color: '#fff',
+                fontSize: '13px',
+                outline: 'none',
+              }}
+            />
           </div>
 
-          {error && (
-            <p style={{ color: '#f43f5e', fontSize: '12px', marginBottom: '14px', textAlign: 'center' }}>
-              {error}
-            </p>
-          )}
+          {error && <p style={{ color: '#f43f5e', fontSize: '12px', marginBottom: '10px' }}>{error}</p>}
 
           <button
             type="submit"
             className="btn-apple-primary"
-            style={{ width: '100%', justifyContent: 'center', padding: '13px' }}
+            style={{ width: '100%', justifyContent: 'center', padding: '11px' }}
           >
-            <span>Authenticate Session</span>
-            <ArrowRight size={16} />
+            <span>Login to Workspace</span>
+            <ArrowRight size={15} />
           </button>
         </form>
 
-        <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', marginTop: '20px' }}>
-          Role-Based Access Control Enabled • 256-Bit Encrypted
+        <p style={{ textAlign: 'center', fontSize: '10px', color: 'var(--text-muted)', marginTop: '16px' }}>
+          Strict Role-Based Access Control • 256-Bit Encrypted Session
         </p>
       </div>
     </div>
