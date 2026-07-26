@@ -70,6 +70,7 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
   const handleDocumentOcrUpload = async (e: React.ChangeEvent<HTMLInputElement>, lead: Lead) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = '';
 
     setIsUploadingOcr(true);
     setOcrSuccessMsg(null);

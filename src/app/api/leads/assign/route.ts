@@ -45,6 +45,16 @@ export async function POST(req: Request) {
       );
     }
 
+    // Check maximum caseload capacity
+    const currentActive = newEmployee.active_caseload || newEmployee.active_cases || 0;
+    const maxCapacity = newEmployee.max_capacity || 15;
+    if (currentActive >= maxCapacity && lead.assigned_employee_id !== employeeId) {
+      return NextResponse.json(
+        { success: false, error: `Specialist ${newEmployee.name} has reached maximum caseload capacity (${currentActive}/${maxCapacity} cases).` },
+        { status: 400 }
+      );
+    }
+
     const previousEmployeeId = lead.assigned_employee_id;
 
     // 3. Update Lead Assignment Status

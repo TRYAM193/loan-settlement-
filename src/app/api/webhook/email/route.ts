@@ -52,23 +52,27 @@ export async function POST(req: Request) {
         assignedEmpId = employees[0].id;
       }
 
-      // Create new lead record
+      // Upsert lead record safely
       const { data: newLead, error: leadErr } = await supabase
         .from('leads')
-        .insert([
-          {
-            full_name: fullName,
-            email: email,
-            phone: phone || `+91900${Math.floor(1000000 + Math.random() * 9000000)}`,
-            source: 'email',
-            status: 'assigned',
-            assigned_employee_id: assignedEmpId,
-            total_debt_amount: totalDebtAmount,
-          },
-        ])
+        .upsert(
+          [
+            {
+              full_name: fullName,
+              email: email,
+              phone: phone || `+91900${Math.floor(1000000 + Math.random() * 9000000)}`,
+              source: 'email',
+              status: 'assigned',
+              assigned_employee_id: assignedEmpId,
+              total_debt_amount: totalDebtAmount,
+              updated_at: new Date().toISOString(),
+            },
+          ],
+          { onConflict: 'email' }
+        )
         .select();
 
-      if (leadErr || !newLead) {
+      if (leadErr || !newLead || newLead.length === 0) {
         return NextResponse.json({ success: false, error: leadErr?.message || 'Failed to create lead' }, { status: 500 });
       }
 

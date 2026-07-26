@@ -61,22 +61,26 @@ export async function POST(req: Request) {
         assignedEmp = employees[0];
       }
 
-      // Create new lead record
+      // Upsert lead record to prevent duplicate phone key constraint crashes
       const { data: newLead, error: leadErr } = await supabase
         .from('leads')
-        .insert([
-          {
-            full_name: fullName,
-            phone: phone,
-            source: 'inbound_call',
-            status: 'assigned',
-            assigned_employee_id: assignedEmpId,
-            total_debt_amount: totalDebtAmount,
-          },
-        ])
+        .upsert(
+          [
+            {
+              full_name: fullName,
+              phone: phone,
+              source: 'inbound_call',
+              status: 'assigned',
+              assigned_employee_id: assignedEmpId,
+              total_debt_amount: totalDebtAmount,
+              updated_at: new Date().toISOString(),
+            },
+          ],
+          { onConflict: 'phone' }
+        )
         .select();
 
-      if (leadErr || !newLead) {
+      if (leadErr || !newLead || newLead.length === 0) {
         return NextResponse.json({ success: false, error: leadErr?.message || 'Failed to create lead' }, { status: 500 });
       }
 
