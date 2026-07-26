@@ -19,6 +19,59 @@ interface AdminChatbotProps {
   session?: UserSession;
 }
 
+const parseBoldText = (text: string) => {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i} style={{ color: '#fff', fontWeight: 700 }}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+};
+
+const renderFormattedMessage = (content: string) => {
+  const lines = content.split('\n');
+  return lines.map((line, idx) => {
+    // Headers
+    if (line.startsWith('### ')) {
+      return (
+        <h4 key={idx} style={{ color: '#fff', fontSize: '13px', fontWeight: 800, marginTop: '8px', marginBottom: '4px' }}>
+          {parseBoldText(line.slice(4))}
+        </h4>
+      );
+    }
+    if (line.startsWith('## ') || line.startsWith('# ')) {
+      const cleanLine = line.startsWith('## ') ? line.slice(3) : line.slice(2);
+      return (
+        <h3 key={idx} style={{ color: '#fff', fontSize: '14px', fontWeight: 800, marginTop: '10px', marginBottom: '6px' }}>
+          {parseBoldText(cleanLine)}
+        </h3>
+      );
+    }
+
+    // Lists
+    if (line.trim().startsWith('- ') || line.trim().startsWith('* ') || line.trim().startsWith('• ')) {
+      const cleanLine = line.trim().slice(2);
+      return (
+        <li key={idx} style={{ marginLeft: '12px', listStyleType: 'disc', marginBottom: '3px', color: '#e2e8f0' }}>
+          {parseBoldText(cleanLine)}
+        </li>
+      );
+    }
+
+    // Normal lines
+    if (line.trim() === '') {
+      return <div key={idx} style={{ height: '6px' }} />;
+    }
+
+    return (
+      <p key={idx} style={{ margin: '2px 0', color: '#e2e8f0' }}>
+        {parseBoldText(line)}
+      </p>
+    );
+  });
+};
+
 export const AdminChatbot: React.FC<AdminChatbotProps> = ({
   leads = [],
   employees = [],
@@ -387,7 +440,7 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
                     lineHeight: '1.5',
                   }}
                 >
-                  <div style={{ whiteSpace: 'pre-wrap' }}>{m.content}</div>
+                  <div>{renderFormattedMessage(m.content)}</div>
                   <div
                     style={{
                       fontSize: '10px',
