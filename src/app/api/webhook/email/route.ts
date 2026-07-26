@@ -45,7 +45,7 @@ export async function POST(req: Request) {
         .from('employees')
         .select('*')
         .eq('status', 'available')
-        .order('active_cases', { ascending: true })
+        .order('active_caseload', { ascending: true })
         .limit(1);
 
       if (employees && employees.length > 0) {
@@ -64,7 +64,6 @@ export async function POST(req: Request) {
             status: 'assigned',
             assigned_employee_id: assignedEmpId,
             total_debt_amount: totalDebtAmount,
-            notes: `Inbound Email Subject: "${subject}".`,
           },
         ])
         .select();
@@ -77,9 +76,10 @@ export async function POST(req: Request) {
 
       // Update employee workload
       if (assignedEmpId && employees && employees.length > 0) {
+        const currentCaseload = employees[0].active_caseload ?? employees[0].active_cases ?? 0;
         await supabase
           .from('employees')
-          .update({ active_cases: employees[0].active_cases + 1 })
+          .update({ active_caseload: currentCaseload + 1 })
           .eq('id', assignedEmpId);
       }
     }
@@ -92,8 +92,8 @@ export async function POST(req: Request) {
           lead_id: leadId,
           employee_id: assignedEmpId,
           channel: 'email',
-          transcript: `Subject: ${subject}\n\n${emailBody}`,
-          aiSummary: `Parsed inbound email regarding: ${subject}`,
+          raw_transcript: `Subject: ${subject}\n\n${emailBody}`,
+          ai_summary: `Parsed inbound email regarding: ${subject}`,
           sentiment: 'Neutral',
         },
       ])

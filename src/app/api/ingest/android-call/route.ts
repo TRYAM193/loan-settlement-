@@ -215,16 +215,21 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 4. Dynamic Lead Assignment Algorithm
+    // 4. Dynamic Lead Assignment Algorithm & Status Preservation
     let assignedEmployeeId: string | null = null;
+    let existingStatus = 'analyzed';
+
     const { data: existingLeads } = await supabase
       .from('leads')
-      .select('id, assigned_employee_id')
+      .select('id, assigned_employee_id, status')
       .eq('phone', callerPhone)
       .limit(1);
 
     if (existingLeads && existingLeads.length > 0) {
       assignedEmployeeId = existingLeads[0].assigned_employee_id;
+      if (existingLeads[0].status === 'settled') {
+        existingStatus = 'settled'; // Do not overwrite completed case status back to analyzed
+      }
     } else {
       const { data: employees } = await supabase
         .from('employees')
@@ -248,7 +253,7 @@ export async function POST(req: NextRequest) {
       .upsert({
         phone: callerPhone,
         source: 'call',
-        status: 'analyzed',
+        status: existingStatus,
         assigned_employee_id: assignedEmployeeId,
         total_debt_amount: aiExtraction.total_debt || 0,
         distress_score: (aiExtraction.distress_score || 'Medium').toLowerCase(),

@@ -92,7 +92,7 @@ GUIDELINES:
 - Provide concise, data-driven responses based on the live agency metrics above.
 `;
 
-    const apiKey = customApiKey || process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    const apiKey = customApiKey || process.env.GEMINI_API_KEY;
 
     // 3. Call Google Gemini REST API if Key is present
     if (apiKey) {

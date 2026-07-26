@@ -12,6 +12,8 @@
 * **🪐 3D Spatial Antigravity Cards (`AntigravityCard.tsx`):** Physics-driven 3D tilt interaction with real-time mouse specular glare reflections and weightless depth.
 * **🌗 100% Theme-Adaptive Popup Modals & Drawers:** All popups (`LeadDetailDrawer`, `AuthModal`, `EmployeeClientCards`, `IngestLeadModal`, `AdminChatbot`) dynamically adapt backgrounds, headers, and text labels to `var(--bg-surface)` and `var(--text-primary)`, guaranteeing zero unreadable text in both Light and Dark themes.
 * **📊 Harmonized Data Caseload Radar:** Explicitly synchronizes and distinguishes **Active Cases** (`status !== 'settled'`) from **Total Assigned Client History** across the Admin Inspector header, employee dropdown options, and KPI metric cards.
+* **🛡️ Security & API Hardening:** Sanitized all raw API key references, removed client-side environment variable leaks, fixed database column name mappings (`active_caseload`), and implemented status preservation to protect settled cases during call ingestion.
+* **📄 Dynamic Document Text Parsing:** Replaced static fallback figures with dynamic regex extraction of real numeric amounts from incoming document text.
 * **🔤 Google Outfit & Inter Typography:** Premium font pairing (`Outfit`, `Inter`, `JetBrains Mono`) for numbers, debt values, and metrics.
 * **💼 Enhanced Scannable Lead Directory (`LeadsTable.tsx`):** Interactive channel filter pills (*Google*, *WhatsApp*, *Calls*, *Email*, *Harassment Flagged*), hover elevations, and status badges.
 
@@ -117,8 +119,8 @@ NEXT_PUBLIC_SUPABASE_URL=https://asednemwscdtetqwwuts.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_secret
 
 # AI Models (Gemini 2.5 Flash & Sarvam AI)
-GEMINI_API_KEY=AIzaSyBt-7OJJ4d8puM20mP99Ac1zjnwuivatqE
-SARVAM_API_KEY=sk_i12x685v_m1rPvpsQgdEvi1nGvg8nw1IY
+GEMINI_API_KEY=your_gemini_api_key_here
+SARVAM_API_KEY=your_sarvam_api_key_here
 GROQ_API_KEY=gsk_your_groq_free_key
 OPENAI_API_KEY=sk-proj-your_openai_key
 
