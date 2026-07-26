@@ -9,19 +9,45 @@ import {
   ShieldAlert,
   ChevronRight,
   User,
+  CheckCircle2,
+  Zap,
 } from 'lucide-react';
-import { Lead, LeadSource } from '../lib/types';
+import { Lead, LeadSource, Employee } from '../lib/types';
 
 interface LeadsTableProps {
   leads: Lead[];
   onSelectLead: (lead: Lead) => void;
   searchQuery: string;
+  employees?: Employee[];
+  onRefreshData?: () => void;
 }
 
-export const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onSelectLead, searchQuery }) => {
+export const LeadsTable: React.FC<LeadsTableProps> = ({
+  leads,
+  onSelectLead,
+  searchQuery,
+  employees = [],
+  onRefreshData,
+}) => {
   const [filterChannel, setFilterChannel] = useState<string>('all');
+  const [approvingLeadId, setApprovingLeadId] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
 
-  const filteredLeads = leads.filter((lead) => {
+  // Calculate priority score for sorting
+  const getPriorityWeight = (lead: Lead) => {
+    let weight = 0;
+    if (lead.harassmentReported) weight += 100;
+    if (lead.distressScore === 'Critical') weight += 80;
+    else if (lead.distressScore === 'High') weight += 50;
+    else if (lead.distressScore === 'Medium') weight += 20;
+    weight += (lead.totalDebtAmount / 100000); // Scale by debt
+    return weight;
+  };
+
+  // Sort leads so Critical & High priority rank at the top
+  const sortedLeads = [...leads].sort((a, b) => getPriorityWeight(b) - getPriorityWeight(a));
+
+  const filteredLeads = sortedLeads.filter((lead) => {
     const matchesSearch =
       lead.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.phone.includes(searchQuery) ||
@@ -63,8 +89,84 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onSelectLead, sea
     }
   };
 
+  const getPriorityBadge = (lead: Lead) => {
+    if (lead.harassmentReported || lead.distressScore === 'Critical') {
+      return (
+        <span style={{ background: 'rgba(255, 59, 48, 0.12)', color: '#ff3b30', border: '1px solid rgba(255, 59, 48, 0.3)', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+          <ShieldAlert size={12} /> CRITICAL (#1)
+        </span>
+      );
+    }
+    if (lead.distressScore === 'High' || lead.totalDebtAmount >= 300000) {
+      return (
+        <span style={{ background: 'rgba(255, 149, 0, 0.12)', color: '#ff9500', border: '1px solid rgba(255, 149, 0, 0.3)', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 700 }}>
+          HIGH PRIORITY
+        </span>
+      );
+    }
+    return (
+      <span style={{ background: 'var(--bg-pill)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 600 }}>
+        STANDARD
+      </span>
+    );
+  };
+
+  const handleAdminApproveRow = async (e: React.MouseEvent, lead: Lead) => {
+    e.stopPropagation();
+    setApprovingLeadId(lead.id);
+
+    // Pick best employee or existing assigned employee
+    const targetEmpId = lead.assignedEmployeeId || (employees[0] ? employees[0].id : '');
+
+    try {
+      const res = await fetch('/api/leads/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: lead.id,
+          employeeId: targetEmpId,
+          adminApproved: true,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setSuccessToast(`✅ Admin Approved! Assigned to ${json.data.employee.name}. Client & Agent WhatsApp dispatched.`);
+        setTimeout(() => setSuccessToast(null), 4000);
+        if (onRefreshData) onRefreshData();
+      }
+    } catch (err) {
+      console.error('Failed approving assignment:', err);
+    } finally {
+      setApprovingLeadId(null);
+    }
+  };
+
   return (
     <div className="glass-card" style={{ padding: '24px', overflow: 'hidden' }}>
+      {/* Toast Notification */}
+      {successToast && (
+        <div
+          className="animate-fade-in"
+          style={{
+            marginBottom: '16px',
+            padding: '12px 16px',
+            background: 'rgba(52, 199, 89, 0.12)',
+            border: '1px solid rgba(52, 199, 89, 0.4)',
+            borderRadius: '14px',
+            color: '#248a3d',
+            fontSize: '13px',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <CheckCircle2 size={16} />
+          <span>{successToast}</span>
+        </div>
+      )}
+
       {/* Header & Filter Bar */}
       <div
         style={{
@@ -78,10 +180,10 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onSelectLead, sea
       >
         <div>
           <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
-            Ingested Client Directory
+            AI-Prioritized Client Directory
           </h3>
           <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-            Showing {filteredLeads.length} leads assigned via workload engine
+            Auto-ranked by Distress Score & Debt Volume ({filteredLeads.length} Total Leads)
           </p>
         </div>
 
@@ -137,12 +239,13 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onSelectLead, sea
         >
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th style={{ padding: '12px 14px' }}>Priority Rank</th>
               <th style={{ padding: '12px 14px' }}>Client</th>
               <th style={{ padding: '12px 14px' }}>Source Channel</th>
               <th style={{ padding: '12px 14px' }}>Total Debt</th>
               <th style={{ padding: '12px 14px' }}>Assigned Rep</th>
               <th style={{ padding: '12px 14px' }}>Status</th>
-              <th style={{ padding: '12px 14px', textAlign: 'right' }}>Action</th>
+              <th style={{ padding: '12px 14px', textAlign: 'right' }}>Admin Control</th>
             </tr>
           </thead>
           <tbody>
@@ -158,6 +261,9 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onSelectLead, sea
                 onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-pill)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
+                {/* Priority Rank */}
+                <td style={{ padding: '14px' }}>{getPriorityBadge(lead)}</td>
+
                 {/* Client info */}
                 <td style={{ padding: '14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -212,26 +318,40 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onSelectLead, sea
                   <span className={`badge-status ${lead.status}`}>{lead.status.replace('_', ' ')}</span>
                 </td>
 
-                {/* Action arrow */}
+                {/* Action buttons */}
                 <td style={{ padding: '14px', textAlign: 'right' }}>
-                  <button
-                    className="btn-apple-secondary"
-                    style={{ padding: '6px 12px', fontSize: '12px' }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectLead(lead);
-                    }}
-                  >
-                    <span>View File</span>
-                    <ChevronRight size={14} />
-                  </button>
+                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                    {lead.status !== 'assigned' && lead.status !== 'settled' && (
+                      <button
+                        className="btn-apple-primary"
+                        style={{ padding: '6px 12px', fontSize: '11px' }}
+                        disabled={approvingLeadId === lead.id}
+                        onClick={(e) => handleAdminApproveRow(e, lead)}
+                      >
+                        <Zap size={13} />
+                        <span>{approvingLeadId === lead.id ? 'Approving...' : 'Approve & Assign'}</span>
+                      </button>
+                    )}
+
+                    <button
+                      className="btn-apple-secondary"
+                      style={{ padding: '6px 12px', fontSize: '11px' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectLead(lead);
+                      }}
+                    >
+                      <span>View File</span>
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
 
             {filteredLeads.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '14px' }}>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '14px' }}>
                   No leads found matching your criteria.
                 </td>
               </tr>

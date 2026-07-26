@@ -59,7 +59,7 @@ export async function POST(req: Request) {
           {
             full_name: fullName,
             email: email,
-            phone: phone || '+91 00000 00000',
+            phone: phone || `+91900${Math.floor(1000000 + Math.random() * 9000000)}`,
             source: 'email',
             status: 'assigned',
             assigned_employee_id: assignedEmpId,

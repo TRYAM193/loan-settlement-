@@ -347,6 +347,8 @@ export default function Home() {
                 leads={displayedLeads}
                 onSelectLead={(lead) => setSelectedLead(lead)}
                 searchQuery={searchQuery}
+                employees={syncedEmployees}
+                onRefreshData={loadDatabaseData}
               />
             ) : (
               <EmployeesView

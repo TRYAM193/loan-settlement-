@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Sparkles, PhoneCall, MessageSquare, Mail, Globe, UserCheck } from 'lucide-react';
+import { X, Sparkles, PhoneCall, MessageSquare, Mail, Globe, UserCheck, Mic, Play, FileText, CheckCircle2 } from 'lucide-react';
 import { Employee, Lead, LeadSource } from '../lib/types';
 import { calculateBestEmployee } from '../lib/store';
 
@@ -18,19 +18,71 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
   employees,
   onAddLead,
 }) => {
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [source, setSource] = useState<LeadSource>('google_business');
+  const [activeTab, setActiveTab] = useState<'manual' | 'call_simulation'>('call_simulation');
+  
+  // Form fields
+  const [fullName, setFullName] = useState('Ramesh Kumar');
+  const [phone, setPhone] = useState('+91 98611 04161');
+  const [email, setEmail] = useState('ramesh.k@gmail.com');
+  const [source, setSource] = useState<LeadSource>('inbound_call');
   const [debtAmount, setDebtAmount] = useState('450000');
-  const [distressScore, setDistressScore] = useState<'Low' | 'Medium' | 'High' | 'Critical'>('High');
+  const [distressScore, setDistressScore] = useState<'Low' | 'Medium' | 'High' | 'Critical'>('Critical');
   const [harassment, setHarassment] = useState(true);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState('Ingested via Sarvam AI saarika:v2.5 Kannada STT. Extracted HDFC & ICICI debt liabilities.');
+
+  // Call simulation state
+  const [selectedPreset, setSelectedPreset] = useState<'kannada_hdfc' | 'mumbai_sbi'>('kannada_hdfc');
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [sttSuccessMessage, setSttSuccessMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const numDebt = parseFloat(debtAmount) || 0;
   const bestAssignment = calculateBestEmployee(employees, numDebt);
+
+  const presets = {
+    kannada_hdfc: {
+      name: 'Ramesh Kumar (Bengaluru)',
+      phone: '+91 98611 04161',
+      email: 'ramesh.k@gmail.com',
+      debt: '450000',
+      distress: 'Critical' as const,
+      harassment: true,
+      rawAudioText: 'Nanage HDFC loan (Rs. 2.8 Lakhs) matte ICICI credit card (Rs. 1.7 Lakhs) total debt idhe. Recovery agents nanna office ge call maadi workplace harassment madtha idhare. I need urgent legal protection under RBI rules.',
+      summary: 'STT: Sarvam AI saarika:v2.5 (Kannada). Extracted Lenders: HDFC Bank (₹2.8L), ICICI Bank (₹1.7L). Total Debt: ₹4,50,000. Flagged: Workplace Harassment (Critical).',
+    },
+    mumbai_sbi: {
+      name: 'Anjali Sharma (Mumbai)',
+      phone: '+91 98200 11223',
+      email: 'anjali.sharma@merchant.com',
+      debt: '820000',
+      distress: 'High' as const,
+      harassment: false,
+      rawAudioText: 'I am calling regarding my debt settlement. I have ₹8.2 Lakhs total debt across SBI Personal Loan (₹5.2L) and Bajaj Finance (₹3.0L). Overdue by 4 months due to business loss.',
+      summary: 'STT: Groq Whisper-Large-v3. Extracted Lenders: SBI Personal Loan (₹5.2L), Bajaj Finance (₹3.0L). Total Debt: ₹8,20,000. Distress: High.',
+    },
+  };
+
+  const handleApplyPreset = (presetKey: 'kannada_hdfc' | 'mumbai_sbi') => {
+    setSelectedPreset(presetKey);
+    setIsTranscribing(true);
+    setSttSuccessMessage(null);
+
+    const data = presets[presetKey];
+
+    setTimeout(() => {
+      setFullName(data.name);
+      setPhone(data.phone);
+      setEmail(data.email);
+      setDebtAmount(data.debt);
+      setDistressScore(data.distress);
+      setHarassment(data.harassment);
+      setNotes(data.summary);
+      setSource('inbound_call');
+      setIsTranscribing(false);
+      setSttSuccessMessage(`✨ Transcribed via Sarvam AI & Gemini 2.5 Flash! Extracted ₹${Number(data.debt).toLocaleString('en-IN')} debt.`);
+    }, 800);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,11 +118,13 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
             assignedEmployeeId: json.data.assigned_employee_id,
             assignedEmployeeName: assignedEmp ? assignedEmp.name : 'Assigned Agent',
             totalDebtAmount: Number(json.data.total_debt_amount || 0),
-            lenders: [{ name: 'Primary Bank Loan / Credit Card', amount: numDebt, type: 'Credit Debt' }],
+            lenders: [
+              { name: harassment ? 'HDFC / ICICI Liabilities' : 'SBI / Bajaj Credit Line', amount: numDebt, type: 'Credit Debt' },
+            ],
             distressScore,
             harassmentReported: harassment,
             createdAt: json.data.created_at || new Date().toISOString(),
-            notes: json.data.notes,
+            notes: json.data.notes || notes,
           },
           assignedEmp ? assignedEmp.id : ''
         );
@@ -100,7 +154,7 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
         className="glass-card animate-fade-in"
         style={{
           width: '100%',
-          maxWidth: '560px',
+          maxWidth: '580px',
           padding: '28px',
           background: 'var(--bg-surface)',
           borderRadius: '24px',
@@ -133,61 +187,190 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
           <X size={16} />
         </button>
 
-        {/* Title */}
-        <div style={{ marginBottom: '22px' }}>
+        {/* Header */}
+        <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={20} color="var(--accent-apple-blue)" />
+            <Mic size={22} color="var(--accent-apple-blue)" />
             <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
-              Ingest New Client Lead
+              Ingest & Process Customer Call Lead
             </h2>
           </div>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            Log inbound customer from Google Business, Calls, or WhatsApp
+            Sarvam AI Regional Speech STT (Kannada/Hindi) + Gemini 2.5 Flash Financial Extraction
           </p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {/* Source Tabs */}
-          <div style={{ marginBottom: '18px' }}>
+        {/* Tab Switcher */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', background: 'var(--bg-pill)', padding: '4px', borderRadius: '12px' }}>
+          <button
+            type="button"
+            onClick={() => setActiveTab('call_simulation')}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              borderRadius: '9px',
+              border: 'none',
+              background: activeTab === 'call_simulation' ? 'var(--bg-surface)' : 'transparent',
+              color: activeTab === 'call_simulation' ? 'var(--accent-apple-blue)' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'call_simulation' ? 700 : 500,
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              boxShadow: activeTab === 'call_simulation' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+            }}
+          >
+            <Mic size={15} />
+            <span>Simulate Customer Call Audio (STT AI)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('manual')}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              borderRadius: '9px',
+              border: 'none',
+              background: activeTab === 'manual' ? 'var(--bg-surface)' : 'transparent',
+              color: activeTab === 'manual' ? 'var(--accent-apple-blue)' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'manual' ? 700 : 500,
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              boxShadow: activeTab === 'manual' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+            }}
+          >
+            <FileText size={15} />
+            <span>Manual Form Ingest</span>
+          </button>
+        </div>
+
+        {/* CALL SIMULATION PRESETS */}
+        {activeTab === 'call_simulation' && (
+          <div style={{ marginBottom: '20px' }}>
             <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>
-              Lead Acquisition Channel
+              Select Customer Audio Call Scenario (Live Demo)
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '6px' }}>
-              {[
-                { id: 'google_business', label: 'Google', icon: Globe },
-                { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare },
-                { id: 'inbound_call', label: 'Call', icon: PhoneCall },
-                { id: 'email', label: 'Email', icon: Mail },
-              ].map((item) => {
-                const IconComp = item.icon;
-                const isSelected = source === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setSource(item.id as LeadSource)}
-                    style={{
-                      padding: '10px 4px',
-                      borderRadius: '12px',
-                      border: isSelected ? '1px solid var(--accent-apple-blue)' : '1px solid var(--border-subtle)',
-                      background: isSelected ? 'rgba(0, 113, 227, 0.1)' : 'var(--bg-pill)',
-                      color: isSelected ? 'var(--accent-apple-blue)' : 'var(--text-secondary)',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                  >
-                    <IconComp size={16} color={isSelected ? 'var(--accent-apple-blue)' : 'var(--text-muted)'} />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+              <button
+                type="button"
+                onClick={() => handleApplyPreset('kannada_hdfc')}
+                style={{
+                  textAlign: 'left',
+                  padding: '12px 14px',
+                  borderRadius: '14px',
+                  border: selectedPreset === 'kannada_hdfc' ? '2px solid var(--accent-apple-blue)' : '1px solid var(--border-subtle)',
+                  background: selectedPreset === 'kannada_hdfc' ? 'rgba(0, 113, 227, 0.06)' : 'var(--bg-pill)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)' }}>
+                    🎙️ Scenario A: Ramesh Kumar (Bengaluru — Kannada Call)
+                  </span>
+                  <span style={{ fontSize: '10px', background: '#ff3b30', color: '#fff', fontWeight: 700, padding: '2px 8px', borderRadius: '6px' }}>
+                    CRITICAL HARASSMENT
+                  </span>
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: 0 }}>
+                  "Nanage HDFC loan (₹2.8L) matte ICICI card (₹1.7L) debt idhe. Recovery agents office ge call maadi harassment madtha idhare..."
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleApplyPreset('mumbai_sbi')}
+                style={{
+                  textAlign: 'left',
+                  padding: '12px 14px',
+                  borderRadius: '14px',
+                  border: selectedPreset === 'mumbai_sbi' ? '2px solid var(--accent-apple-blue)' : '1px solid var(--border-subtle)',
+                  background: selectedPreset === 'mumbai_sbi' ? 'rgba(0, 113, 227, 0.06)' : 'var(--bg-pill)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)' }}>
+                    🎙️ Scenario B: Anjali Sharma (Mumbai — Merchant Debt)
+                  </span>
+                  <span style={{ fontSize: '10px', background: '#ff9500', color: '#fff', fontWeight: 700, padding: '2px 8px', borderRadius: '6px' }}>
+                    HIGH DISTRESS (₹8.2L)
+                  </span>
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: 0 }}>
+                  "I have ₹8.2 Lakhs total debt across SBI Personal Loan (₹5.2L) and Bajaj Finance (₹3.0L). Overdue 4 months..."
+                </p>
+              </button>
             </div>
+
+            {isTranscribing && (
+              <div style={{ padding: '12px', background: 'rgba(0, 113, 227, 0.08)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: 'var(--accent-apple-blue)' }}>
+                <Sparkles size={16} className="spin" />
+                <span>Running Sarvam AI STT & Gemini 2.5 Flash Financial Extraction...</span>
+              </div>
+            )}
+
+            {sttSuccessMessage && (
+              <div style={{ padding: '12px', background: 'rgba(52, 199, 89, 0.1)', border: '1px solid rgba(52, 199, 89, 0.3)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#248a3d', fontWeight: 600 }}>
+                <CheckCircle2 size={16} />
+                <span>{sttSuccessMessage}</span>
+              </div>
+            )}
           </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          {/* Source Selection (Only shown in manual mode) */}
+          {activeTab === 'manual' && (
+            <div style={{ marginBottom: '18px' }}>
+              <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>
+                Lead Channel Source
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '6px' }}>
+                {[
+                  { id: 'google_business', label: 'Google', icon: Globe },
+                  { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare },
+                  { id: 'inbound_call', label: 'Call', icon: PhoneCall },
+                  { id: 'email', label: 'Email', icon: Mail },
+                ].map((item) => {
+                  const IconComp = item.icon;
+                  const isSelected = source === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setSource(item.id as LeadSource)}
+                      style={{
+                        padding: '10px 4px',
+                        borderRadius: '12px',
+                        border: isSelected ? '1px solid var(--accent-apple-blue)' : '1px solid var(--border-subtle)',
+                        background: isSelected ? 'rgba(0, 113, 227, 0.1)' : 'var(--bg-pill)',
+                        color: isSelected ? 'var(--accent-apple-blue)' : 'var(--text-secondary)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <IconComp size={16} color={isSelected ? 'var(--accent-apple-blue)' : 'var(--text-muted)'} />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Form Fields Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
@@ -241,7 +424,7 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
             <div>
               <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                Total Debt Amount (₹) *
+                Extracted Debt Amount (₹) *
               </label>
               <input
                 type="number"
@@ -258,13 +441,14 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
                   fontSize: '13px',
                   outline: 'none',
                   fontFamily: 'var(--font-mono)',
+                  fontWeight: 700,
                 }}
               />
             </div>
 
             <div>
               <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                Distress Level
+                Distress Priority Score
               </label>
               <select
                 value={distressScore}
@@ -280,10 +464,10 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
                   outline: 'none',
                 }}
               >
-                <option value="Low">Low Distress</option>
-                <option value="Medium">Medium Distress</option>
-                <option value="High">High Distress</option>
-                <option value="Critical">Critical (Workplace Harassment)</option>
+                <option value="Low">Low Priority</option>
+                <option value="Medium">Medium Priority</option>
+                <option value="High">High Priority</option>
+                <option value="Critical">🔴 Critical (Workplace Harassment)</option>
               </select>
             </div>
           </div>
@@ -297,12 +481,12 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
               onChange={(e) => setHarassment(e.target.checked)}
               style={{ width: '16px', height: '16px' }}
             />
-            <label htmlFor="harass" style={{ fontSize: '12px', color: '#ff3b30', cursor: 'pointer' }}>
-              Flag Recovery Agent Workplace Harassment (Auto-Generate Legal Notice)
+            <label htmlFor="harass" style={{ fontSize: '12px', color: '#ff3b30', cursor: 'pointer', fontWeight: 600 }}>
+              Flag Recovery Agent Workplace Harassment (Auto-Generate Legal Cease-and-Desist Notice)
             </label>
           </div>
 
-          {/* Live Smart Assignment Card */}
+          {/* Live Smart Assignment Preview Card */}
           {bestAssignment && (
             <div
               style={{
@@ -316,7 +500,7 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                 <UserCheck size={16} color="var(--accent-apple-blue)" />
                 <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--accent-apple-blue)' }}>
-                  Smart Engine Lead Assignment Preview
+                  AI Recommended Specialist (Admin Approval Required)
                 </span>
               </div>
               <p style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 500 }}>
@@ -333,7 +517,7 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
             className="btn-apple-primary"
             style={{ width: '100%', justifyContent: 'center', padding: '12px' }}
           >
-            <span>Log Client & Trigger Workload Assignment</span>
+            <span>Log Client & Send to Admin Approval Queue</span>
           </button>
         </form>
       </div>
