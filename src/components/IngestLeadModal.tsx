@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Sparkles, PhoneCall, MessageSquare, Mail, Globe, UserCheck } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Sparkles, PhoneCall, MessageSquare, Mail, Globe, UserCheck, Upload, Mic, Loader2 } from 'lucide-react';
 import { Employee, Lead, LeadSource } from '../lib/types';
 import { calculateBestEmployee } from '../lib/store';
 
@@ -26,6 +26,10 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
   const [distressScore, setDistressScore] = useState<'Low' | 'Medium' | 'High' | 'Critical'>('High');
   const [harassment, setHarassment] = useState(true);
   const [notes, setNotes] = useState('');
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState('');
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
@@ -37,48 +41,99 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
     if (!fullName || !phone) return;
 
     const assignedEmp = bestAssignment ? bestAssignment.employee : employees[0];
+    setIsProcessing(true);
 
     try {
-      const res = await fetch('/api/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName,
-          phone,
-          email: email || `${fullName.toLowerCase().replace(/\s+/g, '.')}@client.com`,
-          source,
-          totalDebtAmount: numDebt,
-          assignedEmployeeId: assignedEmp ? assignedEmp.id : undefined,
-          notes: notes || `Client logged via ${source.replace('_', ' ')}. Smart workload engine routed to ${assignedEmp ? assignedEmp.name : 'Team'}.`,
-        }),
-      });
+      // If audio file is attached, use the AI STT + Extraction pipeline
+      if (audioFile) {
+        setProcessingStatus('Uploading audio to Supabase Storage...');
+        const formData = new FormData();
+        formData.append('audio', audioFile);
+        formData.append('caller_phone', phone);
+        formData.append('agent_phone', assignedEmp?.phone || '+919876543210');
+        formData.append('duration', '0');
+        formData.append('full_name', fullName);
 
-      const json = await res.json();
-      if (json.success && json.data) {
-        onAddLead(
-          {
-            id: json.data.id,
-            fullName: json.data.full_name,
-            phone: json.data.phone,
-            email: json.data.email,
-            source: json.data.source,
-            status: json.data.status,
-            assignedEmployeeId: json.data.assigned_employee_id,
-            assignedEmployeeName: assignedEmp ? assignedEmp.name : 'Assigned Agent',
-            totalDebtAmount: Number(json.data.total_debt_amount || 0),
-            lenders: [{ name: 'Primary Bank Loan / Credit Card', amount: numDebt, type: 'Credit Debt' }],
-            distressScore,
-            harassmentReported: harassment,
-            createdAt: json.data.created_at || new Date().toISOString(),
-            notes: json.data.notes,
-          },
-          assignedEmp ? assignedEmp.id : ''
-        );
+        setProcessingStatus('Transcribing with Sarvam AI saarika:v2.5...');
+        const res = await fetch('/api/ingest/android-call', {
+          method: 'POST',
+          body: formData,
+        });
+
+        setProcessingStatus('Extracting financial data with Gemini 2.5 Flash...');
+        const json = await res.json();
+        if (json.success && json.data) {
+          onAddLead(
+            {
+              id: json.data.id,
+              fullName: json.data.full_name || fullName,
+              phone: json.data.phone,
+              email: json.data.email || email || `${fullName.toLowerCase().replace(/\s+/g, '.')}@client.com`,
+              source: 'inbound_call',
+              status: json.data.status || 'assigned',
+              assignedEmployeeId: json.data.assigned_employee_id,
+              assignedEmployeeName: assignedEmp ? assignedEmp.name : 'Assigned Agent',
+              totalDebtAmount: Number(json.data.total_debt_amount || 0),
+              lenders: [{ name: 'AI-Extracted Debt', amount: Number(json.data.total_debt_amount || numDebt), type: 'Credit Debt' }],
+              distressScore: json.data.distress_score || distressScore,
+              harassmentReported: json.data.harassment_reported || harassment,
+              createdAt: json.data.created_at || new Date().toISOString(),
+              notes: `STT Engine: ${json.sttProvider || 'Sarvam AI'}. ${json.transcript ? 'Transcript: ' + json.transcript.substring(0, 100) + '...' : ''}`,
+            },
+            json.data.assigned_employee_id || (assignedEmp ? assignedEmp.id : '')
+          );
+        }
+        setProcessingStatus('✅ AI Pipeline Complete!');
+      } else {
+        // Standard lead creation without audio
+        setProcessingStatus('Creating lead and assigning to agent...');
+        const res = await fetch('/api/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fullName,
+            phone,
+            email: email || `${fullName.toLowerCase().replace(/\s+/g, '.')}@client.com`,
+            source,
+            totalDebtAmount: numDebt,
+            assignedEmployeeId: assignedEmp ? assignedEmp.id : undefined,
+            notes: notes || `Client logged via ${source.replace('_', ' ')}. Smart workload engine routed to ${assignedEmp ? assignedEmp.name : 'Team'}.`,
+          }),
+        });
+
+        const json = await res.json();
+        if (json.success && json.data) {
+          onAddLead(
+            {
+              id: json.data.id,
+              fullName: json.data.full_name,
+              phone: json.data.phone,
+              email: json.data.email,
+              source: json.data.source,
+              status: json.data.status,
+              assignedEmployeeId: json.data.assigned_employee_id,
+              assignedEmployeeName: assignedEmp ? assignedEmp.name : 'Assigned Agent',
+              totalDebtAmount: Number(json.data.total_debt_amount || 0),
+              lenders: [{ name: 'Primary Bank Loan / Credit Card', amount: numDebt, type: 'Credit Debt' }],
+              distressScore,
+              harassmentReported: harassment,
+              createdAt: json.data.created_at || new Date().toISOString(),
+              notes: json.data.notes,
+            },
+            assignedEmp ? assignedEmp.id : ''
+          );
+        }
       }
     } catch (err) {
       console.error('Failed to post new lead:', err);
+      setProcessingStatus('❌ Error occurred. Please try again.');
     } finally {
-      onClose();
+      setTimeout(() => {
+        setIsProcessing(false);
+        setProcessingStatus('');
+        setAudioFile(null);
+        onClose();
+      }, 1200);
     }
   };
 
@@ -238,6 +293,80 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
             </div>
           </div>
 
+          {/* Email Field */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+              Email Address
+            </label>
+            <input
+              type="email"
+              placeholder="e.g. ramesh@gmail.com (optional)"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={{
+                width: '100%',
+                background: 'var(--bg-pill)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '10px',
+                padding: '10px 12px',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          {/* Audio Call Recording Upload */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+              📞 Call Recording Audio (triggers AI STT + Financial Extraction)
+            </label>
+            <input
+              type="file"
+              ref={audioInputRef}
+              accept="audio/*,.m4a,.mp3,.wav,.aac,.ogg,.webm"
+              onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
+              style={{ display: 'none' }}
+            />
+            <button
+              type="button"
+              onClick={() => audioInputRef.current?.click()}
+              style={{
+                width: '100%',
+                padding: '14px',
+                borderRadius: '12px',
+                border: audioFile ? '2px solid var(--accent-apple-blue)' : '2px dashed var(--border-subtle)',
+                background: audioFile ? 'rgba(0, 113, 227, 0.06)' : 'var(--bg-pill)',
+                color: audioFile ? 'var(--accent-apple-blue)' : 'var(--text-muted)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                fontSize: '13px',
+                fontWeight: 600,
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {audioFile ? (
+                <>
+                  <Mic size={16} />
+                  <span>{audioFile.name} ({(audioFile.size / 1024).toFixed(0)} KB)</span>
+                </>
+              ) : (
+                <>
+                  <Upload size={16} />
+                  <span>Drop audio file or click to upload (.m4a, .mp3, .wav)</span>
+                </>
+              )}
+            </button>
+            {audioFile && (
+              <p style={{ fontSize: '11px', color: 'var(--accent-apple-blue)', marginTop: '6px', fontWeight: 500 }}>
+                🧠 Will process: Sarvam AI STT → Gemini 2.5 Flash Extraction → Auto-Assignment
+              </p>
+            )}
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
             <div>
               <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
@@ -328,12 +457,44 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
             </div>
           )}
 
+          {/* Processing Status Indicator */}
+          {isProcessing && processingStatus && (
+            <div style={{
+              background: 'rgba(0, 113, 227, 0.08)',
+              border: '1px solid rgba(0, 113, 227, 0.2)',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              marginBottom: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+            }}>
+              <Loader2 size={16} color="var(--accent-apple-blue)" className="spin" />
+              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--accent-apple-blue)' }}>
+                {processingStatus}
+              </span>
+            </div>
+          )}
+
           <button
             type="submit"
             className="btn-apple-primary"
-            style={{ width: '100%', justifyContent: 'center', padding: '12px' }}
+            disabled={isProcessing}
+            style={{
+              width: '100%',
+              justifyContent: 'center',
+              padding: '12px',
+              opacity: isProcessing ? 0.6 : 1,
+              cursor: isProcessing ? 'not-allowed' : 'pointer',
+            }}
           >
-            <span>Log Client & Trigger Workload Assignment</span>
+            {isProcessing ? (
+              <span>Processing AI Pipeline...</span>
+            ) : audioFile ? (
+              <span>🧠 Run AI STT Pipeline & Assign</span>
+            ) : (
+              <span>Log Client & Trigger Workload Assignment</span>
+            )}
           </button>
         </form>
       </div>

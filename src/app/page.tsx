@@ -356,7 +356,7 @@ export default function Home() {
             )}
 
             {/* Admin AI Chatbot Assistant */}
-            <AdminChatbot leads={leads} employees={syncedEmployees} />
+            <AdminChatbot leads={leads} employees={syncedEmployees} settlements={settlements} session={session} />
 
             {/* Admin Lead Drawer with Full Reassignment & Alert Controls */}
             <LeadDetailDrawer
