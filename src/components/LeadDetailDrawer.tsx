@@ -15,7 +15,9 @@ import {
   MessageSquare,
   RefreshCw,
   UserCheck,
-  ExternalLink,
+  CheckCircle2,
+  Sparkles,
+  PartyPopper,
 } from 'lucide-react';
 import { Lead, Employee } from '../lib/types';
 import {
@@ -42,8 +44,10 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
   const [copiedEmpText, setCopiedEmpText] = useState(false);
   const [copiedClientText, setCopiedClientText] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
+  const [isSettling, setIsSettling] = useState(false);
   const [selectedEmpId, setSelectedEmpId] = useState<string>('');
   const [notificationStatus, setNotificationStatus] = useState<string | null>(null);
+  const [settlementSuccessMessage, setSettlementSuccessMessage] = useState<string | null>(null);
 
   if (!lead) return null;
 
@@ -154,6 +158,36 @@ Issued by TRYAM Enterprise Debt Hub`;
     }
   };
 
+  const handleMarkCaseSettled = async () => {
+    setIsSettling(true);
+    setSettlementSuccessMessage(null);
+
+    try {
+      const res = await fetch('/api/leads/settle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: lead.id,
+          employeeId: currentEmpId,
+        }),
+      });
+      const json = await res.json();
+
+      if (json.success) {
+        setSettlementSuccessMessage(
+          `🎉 Client Case Finished & Settled! Celebration WhatsApp sent to ${lead.fullName} (${lead.phone}).`
+        );
+        if (onRefreshData) onRefreshData();
+      } else {
+        setSettlementSuccessMessage(`Error: ${json.error}`);
+      }
+    } catch (err: any) {
+      setSettlementSuccessMessage(`Failed to settle case: ${err.message}`);
+    } finally {
+      setIsSettling(false);
+    }
+  };
+
   return (
     <div
       style={{
@@ -224,6 +258,57 @@ Issued by TRYAM Enterprise Debt Hub`;
             <X size={18} />
           </button>
         </div>
+
+        {/* CASE SETTLEMENT COMPLETION ACTION BUTTON */}
+        <div
+          style={{
+            background: lead.status === 'settled' ? 'rgba(52, 211, 153, 0.12)' : 'rgba(16, 185, 129, 0.08)',
+            border: '1px solid rgba(52, 211, 153, 0.4)',
+            borderRadius: '16px',
+            padding: '18px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sparkles size={18} color="#34d399" />
+              <span style={{ fontSize: '14px', fontWeight: 700, color: '#34d399' }}>
+                {lead.status === 'settled' ? '🎉 Client Case Fully Settled (Happy Customer)' : 'Employee Case Completion Control'}
+              </span>
+            </div>
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+              {lead.status === 'settled'
+                ? 'This client has achieved full loan settlement. Celebration WhatsApp dispatched!'
+                : 'Click when negotiations finish to mark as Settled & send Celebration WhatsApp to client.'}
+            </p>
+          </div>
+
+          <button
+            onClick={handleMarkCaseSettled}
+            disabled={isSettling || lead.status === 'settled'}
+            className="btn-apple-primary"
+            style={{
+              padding: '10px 18px',
+              fontSize: '12px',
+              background: lead.status === 'settled' ? '#047857' : 'linear-gradient(135deg, #10b981, #059669)',
+              color: '#fff',
+              whiteSpace: 'nowrap',
+              borderRadius: '10px',
+            }}
+          >
+            {isSettling ? <RefreshCw size={14} className="spin" /> : <CheckCircle2 size={15} />}
+            <span>{lead.status === 'settled' ? 'Settled (Completed)' : 'Client Case Finished'}</span>
+          </button>
+        </div>
+
+        {settlementSuccessMessage && (
+          <div style={{ padding: '12px 16px', borderRadius: '12px', background: 'rgba(52, 211, 153, 0.15)', border: '1px solid rgba(52, 211, 153, 0.3)', color: '#a7f3d0', fontSize: '12px', marginBottom: '24px' }}>
+            {settlementSuccessMessage}
+          </div>
+        )}
 
         {/* Contact Info Bar */}
         <div
@@ -364,7 +449,7 @@ Issued by TRYAM Enterprise Debt Hub`;
           )}
         </div>
 
-        {/* CHANNEL-AWARE CLIENT NOTIFICATION CARD (Sent TO THE CLIENT) */}
+        {/* CHANNEL-AWARE CLIENT NOTIFICATION CARD */}
         <div className="glass-card" style={{ padding: '20px', marginBottom: '24px', border: isEmailChannel ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid rgba(52, 211, 153, 0.4)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

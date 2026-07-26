@@ -7,47 +7,48 @@
 
 ## 🌟 Core Features Implemented
 
-### 1. 🖥️ Dual-Dashboard Architecture (Admin vs Employee Workspace)
-* **👑 Admin Operational Control Center:**
-  * Global agency view of total debt portfolio (₹12.4M+), overall settlement waivers, and company-wide KPIs.
-  * Staff Capacity Radar & Reassignment Control: Full administrative authority to view employee caseloads, reassign leads, change specialists, and approve client notifications.
-* **💼 Employee Personal Workspace:**
-  * Filtered personal caseload for individual specialists (e.g. *Rajesh Kumar*).
-  * Displays ONLY clients assigned to the logged-in representative with quick action buttons (Call Client, Document OCR Upload, Legal Notice Copy, Settlement Tracker).
+### 1. 🖥️ Dual Role Auth & Separate Dashboards (Admin vs Employee Workspace)
+* **👑 Admin Master Control Center (`role: 'admin'`):**
+  * Displays total clients came, total assigned vs pending, overall debt portfolio (₹12.4M+), and settlement waivers.
+  * **Live Employee Activity & Capacity Radar:** Real-time visibility into what every employee is doing, active caseloads, and status.
+  * **AI Admin Chatbot Assistant (`AdminChatbot`):** Built-in intelligent assistant to answer admin queries about agency caseloads, debt metrics, and employee performance.
+* **💼 Employee Personal Workspace (`role: 'agent'` / `'senior_specialist'`):**
+  * Displays **ONLY clients assigned to that specific employee**.
+  * Shows personal active debt caseload, pending settlements, and client contact info.
+  * **🎉 "Client Case Finished / Settled" Action Button:**
+    * Single-click completion button that updates client status to **`settled`** (Happy Customer).
+    * Dispatches an automated **Celebration WhatsApp Message FROM the Main Company Master Number** directly to the client:
+      ```text
+      🎉 CONGRATULATIONS FROM TRYAM LOAN SETTLEMENT!
+
+      Dear [Client Name],
+      Your debt settlement case has been officially COMPLETED & SETTLED!
+      We are thrilled to help you achieve full financial freedom.
+      ```
+    * Audits interaction in Supabase `lead_logs` with `sentiment: 'HappyCustomer'`.
 
 ### 2. 🏢 Single Company Master Phone Number Architecture
 * **Centralized Communication Hub:** All client inbound calls and WhatsApp messages hit **ONE single central company master number** (`+91 98765 00000` / WhatsApp Business Cloud API).
 * **Zero Employee Setup Overhead:** Individual employees do NOT require separate WhatsApp Business registrations. Outbound notifications to clients are dispatched centrally from the master company number.
 
-### 3. 🖼️ Document OCR Vision API Engine (`/api/ingest/document-ocr`)
-* **GPT-4o-mini Vision Parser:** Analyzes uploaded bank notices, credit card bills, and legal demand letters.
-* **Metric Extraction:** Automatically extracts **Lender Name**, **Account Number**, **Original Principal**, **Overdue Penalties**, and calculates **Target Settlement Waiver (35% – 45%)**.
-* **Dual Ingestion Support:** Processes images sent by clients to the central WhatsApp number OR uploaded directly by representatives in their dashboard drawer.
+### 3. ♊ Google Gemini 2.5 Flash LLM & Vision OCR Engine
+* **Speech Extraction:** Reads raw Kannada / English transcripts from **Sarvam AI `saarika:v2.5`** and uses **Gemini 2.5 Flash** to extract structured JSON (Lender Names, Debt Amounts, Overdue Duration, Distress Score).
+* **Document Vision OCR:** Uses **Gemini 2.5 Flash Vision** to analyze bank notices, credit card bills, and demand letters, extracting Lender Name, Account Number, Principal, Overdue Fees, and calculating Target Settlement Waiver (35% – 45%).
 
 ### 4. 🎙️ Sarvam AI Kannada & Regional Speech STT Engine (`saarika:v2.5`)
 * **Indian Language Specialization:** Integrated **Sarvam AI `saarika:v2.5`** to accurately transcribe informal Kannada (`kn-IN`), Kanglish, Hindi, Hinglish, Tamil, Telugu, and other regional dialects.
 * **Multi-Provider Fallback:** Auto-detects and falls back smoothly to **Groq Free Whisper-Large-v3** and **OpenAI Whisper**.
-* **Zero Socket-Reset Stream Encoding:** Built using Web-Native `fetch` & `Blob` multipart streaming to eliminate Vercel serverless `ECONNRESET` connection errors.
 
 ### 5. 📱 Android Background Call Listener App (`TRYAM Call Listener`)
 * **Native Android App (Kotlin):** Background service that listens for `CALL_STATE_IDLE` events.
 * **Android 10+ Fallback:** Queries `CallLog` provider to resolve caller numbers when telephony intent extras are null.
 * **Storage Audio Scanner:** Scans device storage & MediaStore for newly generated `.m4a`/`.aac`/`.mp3` call recordings.
-* **Direct Ingestion:** Transmits multipart audio recordings directly to the backend ingestion API (`/api/ingest/android-call`).
 
 ### 6. 📩 Channel-Aware Client Notification Engine
-* **Automatic Representative Contact Card:** Sends assigned specialist details (**Specialist Name**, **Phone Number**, **Email**) directly to the client.
-* **Channel Routing Logic:**
-  * **Email Leads (`source: 'email'`):** Dispatches email notification to client's email address with direct `mailto:` action buttons.
-  * **Call & WhatsApp Leads (`source: 'call'`, `'whatsapp'`):** Dispatches WhatsApp message to client's phone number with direct `wa.me` action links.
+* **Automatic Representative Contact Card:** Sends assigned specialist details (**Specialist Name**, **Phone Number**, **Email**) directly to the client via Email or WhatsApp.
 
 ### 7. 📜 RBI Anti-Harassment Legal Notice Generator
 * **Regulatory Compliance:** Automatically generates formal Cease-and-Desist Legal Representation Notices under **RBI Guidelines on Fair Practices Code for Lenders (RBI/2015-16/160)**.
-* **Workplace Protection:** Instructs recovery agents to cease direct workplace contact and direct all settlement proposals strictly to TRYAM assigned legal specialists.
-
-### 8. 📊 Supabase Realtime WebSocket Dashboard
-* **Live Dashboard Sync:** Next.js 16 + React 19 interface subscribed to Supabase PostgreSQL Realtime channels (`supabase_realtime`).
-* **KPI Metrics:** Displays Total Debt Portfolio, Active Settlements, Employee Caseload Radar, and Audio Call Player.
 
 ---
 
@@ -63,9 +64,10 @@
 [Android Listener App]                [Vercel Backend & Ingestion API]      [Supabase DB & Storage]
  • Intercepts Ended Calls             • /api/ingest/android-call             • 4 Relational Tables
  • Scans Device Audio                • /api/ingest/document-ocr            • Storage ('call-recordings')
- • Multipart Upload                   • Sarvam AI saarika:v2.5 (Kannada)     • Realtime WebSockets
- • Diagnostic File Scanner            • GPT-4o-mini Vision OCR Engine        • Dual Dashboard Modes
-                                      • Channel-Aware Client Alerts          (Admin vs Employee)
+ • Multipart Upload                   • /api/leads/assign                    • Realtime WebSockets
+ • Diagnostic File Scanner            • /api/leads/settle                    • Dual Role Dashboards
+                                      • Sarvam AI saarika:v2.5 (Kannada)       (Admin vs Employee)
+                                      • Google Gemini 2.5 Flash LLM & Vision
 ```
 
 ---
@@ -73,16 +75,16 @@
 ## 📋 API Endpoints
 
 ### 1. `POST /api/ingest/android-call`
-Ingests call audio from the Android app, uploads recording to Supabase Storage, transcribes via Sarvam AI, extracts debt metrics via GPT-4o-mini, and assigns a specialist.
-* **Form Fields:** `caller_phone`, `agent_phone`, `duration`, `audio` (file)
+Ingests call audio from the Android app, uploads recording to Supabase Storage, transcribes via Sarvam AI, extracts debt metrics via Gemini 2.5 Flash, and assigns a specialist.
 
 ### 2. `POST /api/ingest/document-ocr`
-Ingests bank notice / debt bill photos, runs GPT-4o-mini Vision OCR, extracts lender & principal metrics, and creates a settlement record in Supabase.
-* **Form Fields:** `lead_id` or `phone`, `document` (image file)
+Ingests bank notice / debt bill photos, runs Gemini 2.5 Flash Vision OCR, extracts lender & principal metrics, and creates a settlement record in Supabase.
 
 ### 3. `POST /api/leads/assign`
 Admin endpoint to reassign or approve an employee for a lead, triggering dual WhatsApp & Email notifications.
-* **Body JSON:** `{ "leadId": "string", "employeeId": "string", "adminApproved": true }`
+
+### 4. `POST /api/leads/settle`
+Employee case completion endpoint to mark client case as **Settled (Happy Customer)**, update Supabase DB, and dispatch automated Celebration WhatsApp message from the Main Company Master Number.
 
 ---
 
@@ -95,7 +97,8 @@ Add the following environment variables to your `.env.local` or **Vercel Project
 NEXT_PUBLIC_SUPABASE_URL=https://asednemwscdtetqwwuts.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_secret
 
-# Speech-to-Text Providers
+# AI Models (Gemini 2.5 Flash & Sarvam AI)
+GEMINI_API_KEY=AIzaSyBt-7OJJ4d8puM20mP99Ac1zjnwuivatqE
 SARVAM_API_KEY=sk_i12x685v_m1rPvpsQgdEvi1nGvg8nw1IY
 GROQ_API_KEY=gsk_your_groq_free_key
 OPENAI_API_KEY=sk-proj-your_openai_key
