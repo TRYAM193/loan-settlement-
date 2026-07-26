@@ -8,14 +8,25 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData();
-    const leadId = formData.get('lead_id') as string | null;
-    const clientPhone = formData.get('phone') as string | null;
-    const documentFile = formData.get('document') as File | null;
+    let leadId: string | null = null;
+    let clientPhone: string | null = null;
+    let documentFile: File | null = null;
 
-    if (!documentFile || documentFile.size === 0) {
+    const contentType = req.headers.get('content-type') || '';
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData();
+      leadId = formData.get('lead_id') as string | null;
+      clientPhone = formData.get('phone') as string | null;
+      documentFile = formData.get('document') as File | null;
+    } else {
+      const json = await req.json().catch(() => ({}));
+      leadId = json.lead_id || json.leadId || null;
+      clientPhone = json.phone || null;
+    }
+
+    if (!documentFile) {
       return NextResponse.json(
-        { success: false, error: 'Document image file is required' },
+        { success: false, error: 'Document image file is required for Vision OCR ingestion' },
         { status: 400 }
       );
     }

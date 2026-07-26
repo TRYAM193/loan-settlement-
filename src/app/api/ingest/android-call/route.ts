@@ -8,11 +8,24 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData();
-    const callerPhone = (formData.get('caller_phone') as string) || 'Unknown Caller';
-    const agentPhone = (formData.get('agent_phone') as string) || '+919876543210';
-    const duration = parseInt((formData.get('duration') as string) || '0', 10);
-    const audioFile = formData.get('audio') as File | null;
+    let callerPhone = 'Unknown Caller';
+    let agentPhone = '+919876543210';
+    let duration = 0;
+    let audioFile: File | null = null;
+
+    const contentType = req.headers.get('content-type') || '';
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData();
+      callerPhone = (formData.get('caller_phone') as string) || callerPhone;
+      agentPhone = (formData.get('agent_phone') as string) || agentPhone;
+      duration = parseInt((formData.get('duration') as string) || '0', 10);
+      audioFile = formData.get('audio') as File | null;
+    } else {
+      const json = await req.json().catch(() => ({}));
+      callerPhone = json.caller_phone || json.phone || callerPhone;
+      agentPhone = json.agent_phone || agentPhone;
+      duration = parseInt(json.duration || '0', 10);
+    }
 
     console.log(`[VERCEL INGESTION] Processing call from ${callerPhone} (Duration: ${duration}s)`);
 
