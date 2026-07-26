@@ -120,7 +120,18 @@ export default function Home() {
 
   // Determine current viewing mode
   const isAdmin = session.user?.role === 'admin';
-  const loggedInEmpId = session.user?.employeeId;
+  const loggedInEmpId = (session.user as any)?.employeeId;
+
+  const displayedLeads = leads.filter((lead) => {
+    // Search query filter
+    const matchesSearch =
+      lead.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.phone.includes(searchQuery) ||
+      (lead.email && lead.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (lead.assignedEmployeeName && lead.assignedEmployeeName.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return matchesSearch;
+  });
 
   // Active viewing employee ID (for Employee View or Admin Inspector)
   const activeEmployeeId = isAdmin
