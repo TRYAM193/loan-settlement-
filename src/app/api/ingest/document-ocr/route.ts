@@ -66,13 +66,14 @@ export async function POST(req: NextRequest) {
       summary: 'Final Legal Notice for Loan Default processed via TRYAM Enterprise Vision AI.',
     };
 
-    const geminiOcrRes = await analyzeBankNoticeWithGemini(base64Data, mimeType, geminiKey || '');
+    const geminiKey = process.env.GEMINI_API_KEY || '';
+    const geminiOcrRes = await analyzeBankNoticeWithGemini(base64Data, mimeType, geminiKey);
     if (geminiOcrRes) {
       ocrParsedData = { ...ocrParsedData, ...geminiOcrRes };
     }
 
     // Fallback Vision OCR: GPT-4o-mini Vision
-    if (!parsedWithGemini && process.env.OPENAI_API_KEY) {
+    if (process.env.OPENAI_API_KEY) {
       try {
         console.log('[GPT-4o-mini VISION] Querying Vision fallback for Bank Notice OCR...');
         const visionRes = await fetch('https://api.openai.com/v1/chat/completions', {
