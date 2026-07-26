@@ -55,7 +55,9 @@ export async function fetchLeads(): Promise<Lead[]> {
       source: lead.source || 'inbound_call',
       status: lead.status || 'new',
       assignedEmployeeId: lead.assigned_employee_id || '',
-      assignedEmployeeName: lead.employees?.name || 'Unassigned',
+      assignedEmployeeName: Array.isArray(lead.employees)
+        ? (lead.employees[0]?.name || 'Unassigned')
+        : (lead.employees?.name || 'Unassigned'),
       totalDebtAmount: Number(lead.total_debt_amount || 0),
       lenders: lead.lenders || [],
       distressScore: (lead.distress_score ? lead.distress_score.charAt(0).toUpperCase() + lead.distress_score.slice(1) : 'Medium') as any,

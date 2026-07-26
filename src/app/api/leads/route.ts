@@ -4,7 +4,7 @@ import { sendNewLeadAssignmentWhatsAppToEmployee } from '@/lib/whatsappService';
 
 export async function GET() {
   try {
-    const { data: leads, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+    const { data: leads, error } = await supabase.from('leads').select('*, employees(name)').order('created_at', { ascending: false });
 
     if (error) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
