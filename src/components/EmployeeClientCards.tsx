@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { AntigravityCard } from './AntigravityCard';
 import {
   Phone,
   Mail,
@@ -131,9 +132,10 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
             const isSettled = lead.status === 'settled';
 
             return (
-              <div
+              <AntigravityCard
                 key={lead.id}
-                className="glass-card animate-fade-in"
+                onClick={() => setSelectedLead(lead)}
+                glowColor={isSettled ? 'rgba(52, 199, 89, 0.15)' : 'rgba(0, 113, 227, 0.15)'}
                 style={{
                   padding: '20px',
                   borderRadius: '18px',
@@ -143,7 +145,6 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
                   justifyContent: 'space-between',
                   cursor: 'pointer',
                 }}
-                onClick={() => setSelectedLead(lead)}
               >
                 {/* Card Top Header */}
                 <div>
@@ -205,7 +206,7 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
                     <span>Open Case Details</span>
                   </button>
                 </div>
-              </div>
+              </AntigravityCard>
             );
           })}
         </div>
