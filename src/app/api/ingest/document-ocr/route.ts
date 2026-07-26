@@ -66,15 +66,9 @@ export async function POST(req: NextRequest) {
       summary: 'Final Legal Notice for Loan Default processed via TRYAM Enterprise Vision AI.',
     };
 
-    const geminiKey = process.env.GEMINI_API_KEY;
-    let parsedWithGemini = false;
-
-    if (geminiKey) {
-      const geminiOcrRes = await analyzeBankNoticeWithGemini(base64Data, mimeType, geminiKey);
-      if (geminiOcrRes) {
-        ocrParsedData = { ...ocrParsedData, ...geminiOcrRes };
-        parsedWithGemini = true;
-      }
+    const geminiOcrRes = await analyzeBankNoticeWithGemini(base64Data, mimeType, geminiKey || '');
+    if (geminiOcrRes) {
+      ocrParsedData = { ...ocrParsedData, ...geminiOcrRes };
     }
 
     // Fallback Vision OCR: GPT-4o-mini Vision

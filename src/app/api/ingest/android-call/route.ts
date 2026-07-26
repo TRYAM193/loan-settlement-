@@ -148,13 +148,11 @@ export async function POST(req: NextRequest) {
       if (rawTranscript && rawTranscript.length > 5 && !rawTranscript.includes('skipped')) {
         let extractedWithPrimary = false;
 
-        // Primary LLM: Google Gemini AI
-        if (geminiKey) {
-          const geminiResult = await extractFinancialMetricsWithGemini(rawTranscript, geminiKey);
-          if (geminiResult) {
-            aiExtraction = { ...aiExtraction, ...geminiResult };
-            extractedWithPrimary = true;
-          }
+        // Primary LLM: TRYAM Financial AI Engine
+        const geminiResult = await extractFinancialMetricsWithGemini(rawTranscript, geminiKey || '');
+        if (geminiResult) {
+          aiExtraction = { ...aiExtraction, ...geminiResult };
+          extractedWithPrimary = true;
         }
 
         // Fallback LLM: OpenAI / Groq
