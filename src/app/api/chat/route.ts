@@ -163,16 +163,50 @@ GUIDELINES:
         reply = `### 🤖 TRYAM AI Assistant (Employee Mode)\n\nWelcome ${currentEmployeeObj?.name || 'Specialist'}! I am restricted to your **${activeLeads.length} assigned clients** (Total Debt: ₹${totalDebt.toLocaleString('en-IN')}).\n\nAsk me any question about your assigned clients, debt settlement tactics, or RBI rules!`;
       }
     } else {
-      if (query.includes('employee') || query.includes('agent') || query.includes('team') || query.includes('workload')) {
+      // 1. Check if query asks about a specific employee by full name or first name (e.g. "what is Vijay doing?", "Ananya's clients")
+      const matchedEmployee = allEmployees.find((e: any) => {
+        const fullName = (e.name || '').toLowerCase();
+        const firstName = fullName.split(' ')[0];
+        return query.includes(fullName) || (firstName.length >= 3 && query.includes(firstName));
+      });
+
+      if (matchedEmployee) {
+        const empLeads = activeLeads.filter(
+          (l: any) =>
+            l.assigned_employee_id === matchedEmployee.id ||
+            (l.assigned_employee_name && l.assigned_employee_name.toLowerCase().includes(matchedEmployee.name.toLowerCase().split(' ')[0]))
+        );
+        const empDebt = empLeads.reduce((acc: number, l: any) => acc + Number(l.total_debt_amount || 0), 0);
+
+        reply = `### 👤 ${matchedEmployee.name} (${(matchedEmployee.role || 'Specialist').replace('_', ' ')})\n\n` +
+          `**Status:** ${matchedEmployee.status || 'available'} | **Active Caseload:** ${matchedEmployee.active_caseload || empLeads.length} cases | **Portfolio Debt:** ₹${empDebt.toLocaleString('en-IN')}\n\n` +
+          `**Assigned Clients Roster:**\n` +
+          (empLeads.length === 0
+            ? '_No active clients currently assigned to this representative._'
+            : empLeads.map((l: any) => `- **${l.full_name || 'Client'}** (${l.phone || 'N/A'}): ₹${Number(l.total_debt_amount || 0).toLocaleString('en-IN')} [Status: ${l.status || 'assigned'}]`).join('\n'));
+      } else if (query.includes('solved') || query.includes('settled') || query.includes('completed') || query.includes('closed')) {
+        const settledLeads = activeLeads.filter((l: any) => l.status === 'settled' || l.status === 'completed');
+        reply = `### 🎉 Settled & Completed Cases Summary\n\n` +
+          `- **Total Ingested Clients:** ${activeLeads.length}\n` +
+          `- **Fully Settled Client Cases:** ${settledLeads.length}\n` +
+          `- **Active In-Progress Cases:** ${activeLeads.length - settledLeads.length}\n` +
+          `- **Completed Settlement Agreements:** ${activeSettlements.length}`;
+      } else if (query.includes('harassment') || query.includes('threat') || query.includes('rbi')) {
+        const harassmentLeads = activeLeads.filter((l: any) => l.harassment_reported || l.harassmentReported);
+        reply = `### 🛡️ RBI Anti-Harassment Flagged Cases (${harassmentLeads.length})\n\n` +
+          (harassmentLeads.length === 0
+            ? '_No client cases currently flagged for workplace recovery agent harassment._'
+            : harassmentLeads.map((l: any) => `- **${l.full_name}** (${l.phone}): ₹${Number(l.total_debt_amount || 0).toLocaleString('en-IN')} [Assigned Specialist: ${l.assigned_employee_name || 'Agent'}]`).join('\n'));
+      } else if (query.includes('employee') || query.includes('agent') || query.includes('team') || query.includes('workload') || query.includes('staff')) {
         reply = `### 👥 Master Employee Workload & Capacity Radar\n\nWe currently have **${allEmployees.length} team members** on record:\n\n` +
-          allEmployees.map((e: any) => `- **${e.name}**: ${e.active_caseload || 0} active cases (${e.status || 'available'})`).join('\n');
-      } else if (query.includes('lead') || query.includes('client') || query.includes('portfolio') || query.includes('debt')) {
+          allEmployees.map((e: any) => `- **${e.name}** (${(e.role || 'Specialist').replace('_', ' ')}): ${e.active_caseload || 0} active cases [${e.status || 'available'}]`).join('\n');
+      } else if (query.includes('lead') || query.includes('client') || query.includes('portfolio') || query.includes('debt') || query.includes('many')) {
         reply = `### 📊 Agency Debt Portfolio & Ingested Leads Summary\n\n` +
           `- **Total Agency Leads:** ${activeLeads.length}\n` +
           `- **Total Agency Debt Volume:** ₹${totalDebt.toLocaleString('en-IN')}\n` +
           `- **Active Settlements:** ${activeSettlements.length}`;
       } else {
-        reply = `### 🤖 TRYAM Master Admin AI Assistant\n\nFull Master Admin Access Active.\n\n**Snapshot:** ${activeLeads.length} total leads across ${allEmployees.length} agents (Total Debt: ₹${totalDebt.toLocaleString('en-IN')}).`;
+        reply = `### 🤖 TRYAM Master Admin AI Assistant\n\nFull Master Admin Access Active.\n\n**Snapshot:** ${activeLeads.length} total leads across ${allEmployees.length} agents (Total Debt: ₹${totalDebt.toLocaleString('en-IN')}).\n\nAsk me *"What is Vijay doing?"*, *"How many clients are settled?"*, or *"Show harassment cases"*!`;
       }
     }
 
