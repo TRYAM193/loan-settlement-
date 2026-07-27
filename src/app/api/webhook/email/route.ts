@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     // 1. Find existing lead by email or phone
     const { data: existingLeads } = await supabase.from('leads').select('*').eq('email', email).limit(1);
 
-    let leadId: string;
+    let leadId: string | null = null;
     let assignedEmpId: string | null = null;
 
     if (existingLeads && existingLeads.length > 0) {
@@ -52,24 +52,20 @@ export async function POST(req: Request) {
         assignedEmpId = employees[0].id;
       }
 
-      // Upsert lead record safely
+      // Create lead record cleanly
       const { data: newLead, error: leadErr } = await supabase
         .from('leads')
-        .upsert(
-          [
-            {
-              full_name: fullName,
-              email: email,
-              phone: phone || `+91900${Math.floor(1000000 + Math.random() * 9000000)}`,
-              source: 'email',
-              status: 'assigned',
-              assigned_employee_id: assignedEmpId,
-              total_debt_amount: totalDebtAmount,
-              updated_at: new Date().toISOString(),
-            },
-          ],
-          { onConflict: 'email' }
-        )
+        .insert([
+          {
+            full_name: fullName,
+            email: email,
+            phone: phone || `+91900${Math.floor(1000000 + Math.random() * 9000000)}`,
+            source: 'email',
+            status: 'assigned',
+            assigned_employee_id: assignedEmpId,
+            total_debt_amount: totalDebtAmount,
+          },
+        ])
         .select();
 
       if (leadErr || !newLead || newLead.length === 0) {
