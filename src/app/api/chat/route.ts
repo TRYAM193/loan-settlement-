@@ -99,13 +99,13 @@ GUIDELINES:
 - Provide concise, data-driven responses based on the live agency metrics above.
 `;
 
-    const apiKey = customApiKey || process.env.GEMINI_API_KEY;
+    const apiKey = customApiKey || process.env.GEMINI_API_KEY || '';
 
     // 3. Call Google Gemini REST API if Key is present
     if (apiKey) {
       try {
-        const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        let geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -123,6 +123,28 @@ GUIDELINES:
             }),
           }
         );
+
+        if (geminiRes.status === 404) {
+          geminiRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    role: 'user',
+                    parts: [
+                      { text: systemContext },
+                      ...messagesList.map((h: any) => ({ text: `${(h.role || 'user').toUpperCase()}: ${h.content || ''}` })),
+                      { text: `USER QUESTION: ${message}` },
+                    ],
+                  },
+                ],
+              }),
+            }
+          );
+        }
 
         if (geminiRes.status === 429) {
           return NextResponse.json({
