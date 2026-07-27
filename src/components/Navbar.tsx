@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Building2,
   PlusCircle,
   Search,
   LogOut,
   Lock,
+  Database,
 } from 'lucide-react';
 import { UserSession } from '../lib/types';
 
