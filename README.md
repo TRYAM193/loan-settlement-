@@ -42,7 +42,13 @@
       ```
     * Audits interaction in Supabase `lead_logs` with `sentiment: 'HappyCustomer'`.
 
-### 2. 🏢 Single Company Master Phone Number Architecture
+### 4. 💬 Meta WhatsApp Cloud API Inbound Webhook (`/api/webhook/whatsapp`)
+* **📲 Direct Company WhatsApp Number Ingestion:** Connects your official company Meta WhatsApp Business number directly to TRYAM CRM.
+* **GET URL Verification:** Handles Meta Webhook verification requests (`GET /api/webhook/whatsapp?hub.mode=subscribe&hub.verify_token=tryam_whatsapp_secret_token&hub.challenge=...`).
+* **POST Event Ingestion:** Automatically ingests incoming WhatsApp messages, analyzes debt liabilities via TRYAM Financial AI, sets `source: 'whatsapp'`, and places the lead into the **`NEW` Admin Approval Queue**.
+* **Filter Tab Sync:** Incoming WhatsApp leads automatically render under the **`WhatsApp`** filter tab with a green **WhatsApp Inbound** badge.
+
+### 5. 🏢 Single Company Master Phone Number Architecture
 * **Centralized Communication Hub:** All client inbound calls and WhatsApp messages hit **ONE single central company master number** (`+91 98765 00000` / WhatsApp Business Cloud API).
 * **Zero Employee Setup Overhead:** Individual employees do NOT require separate WhatsApp Business registrations. Outbound notifications to clients are dispatched centrally from the master company number.
 
