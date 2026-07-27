@@ -186,18 +186,25 @@ export default function Home() {
 
   const activeEmployeeObj = syncedEmployees.find((e) => e.id === activeEmployeeId) || null;
 
-  // Dynamically resolve assignedEmployeeName from syncedEmployees for 100% data integrity
+  // Dynamically resolve assignedEmployeeName & assignedEmployeeId from syncedEmployees for 100% data integrity
   const syncedLeads = leads.map((l) => {
-    const assignedEmp = syncedEmployees.find((e) => e.id === l.assignedEmployeeId);
+    const assignedEmp = syncedEmployees.find(
+      (e) => e.id === l.assignedEmployeeId || e.name === l.assignedEmployeeName
+    );
     return {
       ...l,
+      assignedEmployeeId: assignedEmp ? assignedEmp.id : l.assignedEmployeeId,
       assignedEmployeeName: assignedEmp ? assignedEmp.name : (l.assignedEmployeeName || 'Unassigned'),
     };
   });
 
   // Filter leads strictly for isolated employee view
   const isolatedEmployeeLeads = activeEmployeeId
-    ? syncedLeads.filter((l) => l.assignedEmployeeId === activeEmployeeId)
+    ? syncedLeads.filter(
+        (l) =>
+          l.assignedEmployeeId === activeEmployeeId ||
+          (activeEmployeeObj && l.assignedEmployeeName === activeEmployeeObj.name)
+      )
     : [];
 
   const displayedLeads = syncedLeads.filter((lead) => {
@@ -210,7 +217,12 @@ export default function Home() {
     if (!matchesSearch) return false;
 
     if (isAdmin && adminInspectedEmpId !== 'master') {
-      return lead.assignedEmployeeId === adminInspectedEmpId;
+      const inspectedEmp = syncedEmployees.find((e) => e.id === adminInspectedEmpId);
+      const inspectedName = inspectedEmp ? inspectedEmp.name : '';
+      return (
+        lead.assignedEmployeeId === adminInspectedEmpId ||
+        (inspectedName && lead.assignedEmployeeName === inspectedName)
+      );
     }
 
     return true;
