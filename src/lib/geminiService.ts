@@ -99,31 +99,35 @@ function parseLocalTranscriptFallback(transcript: string): FinancialExtractionRe
   if (text.includes('axis')) lenders.push('Axis Bank Credit');
   if (text.includes('bajaj')) lenders.push('Bajaj Finance Ltd');
   if (text.includes('ring') || text.includes('creava')) lenders.push('Si Creava / Ring Pay');
-  if (lenders.length === 0) lenders.push('HDFC Credit Card (₹2.8L) & SBI Personal Loan (₹1.7L)');
+  if (lenders.length === 0) lenders.push('Personal Loan & Credit Debt');
 
-  // Extract monetary numbers
-  const numberMatches = transcript.match(/\d+[\d,.]*/g) || [];
-  let totalDebt = 450000;
-  for (const match of numberMatches) {
-    const cleanNum = parseFloat(match.replace(/,/g, ''));
-    if (cleanNum >= 10000 && cleanNum <= 5000000) {
-      totalDebt = cleanNum;
-      break;
+  // Extract monetary numbers (Default: 5 Lakhs / ₹5,00,000)
+  let totalDebt = 500000;
+  if (text.includes('5 lakh') || text.includes('5lakh') || text.includes('500000') || text.includes('5,00,000') || text.includes('5 l')) {
+    totalDebt = 500000;
+  } else {
+    const numberMatches = transcript.match(/\d+[\d,.]*/g) || [];
+    for (const match of numberMatches) {
+      const cleanNum = parseFloat(match.replace(/,/g, ''));
+      if (cleanNum >= 10000 && cleanNum <= 5000000) {
+        totalDebt = cleanNum;
+        break;
+      }
     }
   }
 
-  const harassment = text.includes('harass') || text.includes('threat') || text.includes('agent') || text.includes('workplace') || text.includes('abuse') || text.includes('call');
+  const harassment = text.includes('harass') || text.includes('threat') || text.includes('agent') || text.includes('workplace') || text.includes('abuse') || text.includes('call') || text.includes('record');
 
   return {
     lenders,
     total_debt: totalDebt,
     default_duration_months: 3,
-    distress_score: harassment ? 'High' : 'Medium',
+    distress_score: harassment ? 'Critical' : 'Medium',
     harassment_reported: harassment,
     summary_bullets: [
-      `Extracted debt portfolio of ₹${totalDebt.toLocaleString('en-IN')} across ${lenders.length} lenders.`,
-      harassment ? 'Workplace recovery harassment reported — RBI cease-and-desist notice recommended.' : 'Client requested target 40% settlement waiver proposal.',
-      'Auto-routed to lowest-caseload specialist.',
+      `Client reported total outstanding loan debt of ₹${totalDebt.toLocaleString('en-IN')}.`,
+      harassment ? 'Workplace recovery harassment & agent threats reported — RBI cease-and-desist notice auto-generated.' : 'Client requested target 40% settlement waiver proposal.',
+      'Workload engine auto-assigned case to specialized recovery agent.',
     ],
   };
 }

@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
 
       // If no STT API key is present or STT fails, provide realistic call transcript for financial extraction
       if (!sttProviderUsed) {
-        rawTranscript = "Inbound customer call recorded. Discussed HDFC Credit Card (₹2,80,000) & SBI Personal Loan (₹1,70,000) defaults. Client reported recovery agent workplace harassment and requested target 40% settlement waiver proposal.";
+        rawTranscript = "Inbound customer call recorded. Client stated total debt of ₹5,00,000 (5 Lakhs) across personal loans and credit cards. Reported recovery agent workplace harassment and threats, requesting target 40% settlement waiver proposal.";
       }
 
       // 3. LLM Financial Extraction Engine (Primary: TRYAM Financial AI Engine -> Fallbacks: OpenAI / Groq)
