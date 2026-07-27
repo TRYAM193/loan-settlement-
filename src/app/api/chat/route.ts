@@ -4,9 +4,16 @@ import { supabase } from '@/lib/supabase';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { message, history = [], customApiKey = '', userRole = 'admin', userEmployeeId = '' } = body;
 
-    if (!message) {
+    const messagesList = Array.isArray(body.messages) ? body.messages : [];
+    const lastUserMsg = messagesList.filter((m: any) => m.role === 'user').pop()?.content;
+    const message = body.message || lastUserMsg || '';
+
+    const userRole = body.session?.user?.role || body.userRole || 'admin';
+    const userEmployeeId = body.session?.user?.employeeId || body.userEmployeeId || '';
+    const customApiKey = body.apiKey || body.customApiKey || '';
+
+    if (!message || !message.trim()) {
       return NextResponse.json({ success: false, error: 'Message is required' }, { status: 400 });
     }
 
@@ -108,7 +115,7 @@ GUIDELINES:
                   role: 'user',
                   parts: [
                     { text: systemContext },
-                    ...history.map((h: any) => ({ text: `${h.role.toUpperCase()}: ${h.content}` })),
+                    ...messagesList.map((h: any) => ({ text: `${(h.role || 'user').toUpperCase()}: ${h.content || ''}` })),
                     { text: `USER QUESTION: ${message}` },
                   ],
                 },

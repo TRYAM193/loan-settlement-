@@ -103,18 +103,19 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
   useEffect(() => {
     // Reset conversation history on user or role switch to enforce data isolation
     const isEmp = session?.user?.role === 'agent';
+    const empLeadsCount = leads.filter(l => l.assignedEmployeeId === (session?.user as any)?.employeeId).length;
     setMessages([
       {
         id: '1',
         role: 'assistant',
         content: isEmp
-          ? `👋 Hello ${session?.user?.name || 'Specialist'}! I am your **TRYAM Specialist Copilot**. I have access to your personal assigned client portfolio (${leads.filter(l => l.assignedEmployeeId === (session?.user as any)?.employeeId).length} clients).\n\nAsk me about your clients, settlement options, or cease-and-desist notices!`
+          ? `👋 Hello ${session?.user?.name || 'Specialist'}! I am your **TRYAM Specialist Copilot**. I have access to your personal assigned client portfolio (**${empLeadsCount} clients**).\n\nAsk me about your clients, settlement options, or cease-and-desist notices!`
           : `👋 Hello ${session?.user?.name || 'Manager'}! I am your **TRYAM AI Operational Copilot**. I have real-time access to your agency database: **${leads.length} Active Leads**, **${employees.length} Staff**, and total debt records.\n\nAsk me anything like *"Show me Vijay's cases"*, *"Which leads are flagged for harassment?"*, or *"Calculate overall portfolio debt"*!`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         source: 'Database Context Synchronized',
       },
     ]);
-  }, [session?.user?.id, session?.user?.role]);
+  }, [session?.user?.id, session?.user?.role, leads.length, employees.length]);
 
   useEffect(() => {
     if (isOpen) {
