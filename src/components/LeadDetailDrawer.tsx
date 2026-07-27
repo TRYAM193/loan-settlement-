@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Send,
@@ -46,10 +46,31 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
   const [notificationStatus, setNotificationStatus] = useState<string | null>(null);
   const [settlementSuccessMessage, setSettlementSuccessMessage] = useState<string | null>(null);
 
+  // Sync selectedEmpId when lead or employee list changes
+  useEffect(() => {
+    if (lead) {
+      const matchingEmp = employees.find(
+        (e) => e.id === lead.assignedEmployeeId || e.name === lead.assignedEmployeeName
+      );
+      if (matchingEmp) {
+        setSelectedEmpId(matchingEmp.id);
+      } else {
+        setSelectedEmpId(lead.assignedEmployeeId || '');
+      }
+      setNotificationStatus(null);
+      setSettlementSuccessMessage(null);
+    }
+  }, [lead?.id, lead?.assignedEmployeeId, lead?.assignedEmployeeName, employees]);
+
   if (!lead) return null;
 
-  const currentEmpId = selectedEmpId || lead.assignedEmployeeId;
-  const assignedEmp = employees.find((e) => e.id === currentEmpId);
+  const assignedEmp =
+    employees.find((e) => e.id === selectedEmpId) ||
+    employees.find((e) => e.id === lead.assignedEmployeeId) ||
+    employees.find((e) => e.name === lead.assignedEmployeeName) ||
+    null;
+
+  const currentEmpId = assignedEmp ? assignedEmp.id : selectedEmpId;
 
   // Determine Client Channel Preference
   const clientSource = (lead.source || 'inbound_call').toLowerCase();
