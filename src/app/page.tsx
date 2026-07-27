@@ -124,7 +124,7 @@ export default function Home() {
     setEmployees((prev) =>
       prev.map((emp): Employee => {
         if (emp.id === assignedEmpId) {
-          const newActiveCases = emp.activeCases + 1;
+          const newActiveCases = (emp.activeCases || 0) + 1;
           const newStatus: EmployeeStatus = newActiveCases >= emp.maxCapacity ? 'busy' : emp.status;
           return {
             ...emp,
@@ -188,8 +188,8 @@ export default function Home() {
 
   const displayedLeads = syncedLeads.filter((lead) => {
     const matchesSearch =
-      lead.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.phone.includes(searchQuery) ||
+      (lead.fullName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (lead.phone || '').includes(searchQuery) ||
       (lead.email && lead.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (lead.assignedEmployeeName && lead.assignedEmployeeName.toLowerCase().includes(searchQuery.toLowerCase()));
 

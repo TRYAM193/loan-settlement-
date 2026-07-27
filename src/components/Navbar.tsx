@@ -215,7 +215,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {session.user.name}
                 </span>
                 <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
-                  {session.user.role.replace('_', ' ')}
+                  {(session.user.role || 'admin').replace('_', ' ')}
                 </span>
               </div>
               <button

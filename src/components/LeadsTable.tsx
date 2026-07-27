@@ -49,8 +49,8 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
 
   const filteredLeads = sortedLeads.filter((lead) => {
     const matchesSearch =
-      lead.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.phone.includes(searchQuery) ||
+      (lead.fullName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (lead.phone || '').includes(searchQuery) ||
       (lead.assignedEmployeeName && lead.assignedEmployeeName.toLowerCase().includes(searchQuery.toLowerCase()));
 
     if (!matchesSearch) return false;
@@ -131,7 +131,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
 
       const json = await res.json();
       if (json.success) {
-        setSuccessToast(`✅ Admin Approved! Assigned to ${json.data.employee.name}. Client & Agent WhatsApp dispatched.`);
+        setSuccessToast(`✅ Admin Approved! Assigned to ${json.data?.employee?.name || 'Specialist'}. Client & Agent WhatsApp dispatched.`);
         setTimeout(() => setSuccessToast(null), 4000);
         if (onRefreshData) onRefreshData();
       }
@@ -281,7 +281,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                         fontSize: '14px',
                       }}
                     >
-                      {lead.fullName.charAt(0)}
+                      {(lead.fullName || 'Client').charAt(0)}
                     </div>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -315,7 +315,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
 
                 {/* Status */}
                 <td style={{ padding: '14px' }}>
-                  <span className={`badge-status ${lead.status}`}>{lead.status.replace('_', ' ')}</span>
+                  <span className={`badge-status ${lead.status || 'new'}`}>{(lead.status || 'new').replace('_', ' ')}</span>
                 </td>
 
                 {/* Action buttons */}

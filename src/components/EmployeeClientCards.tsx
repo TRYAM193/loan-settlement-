@@ -89,9 +89,9 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
 
       if (json.success) {
         setOcrSuccessMsg(
-          `✅ TRYAM Enterprise Vision AI parsed notice! Lender: ${json.parsedMetrics.lender_name}, Principal: ₹${json.parsedMetrics.original_principal.toLocaleString(
+          `✅ TRYAM Enterprise Vision AI parsed notice! Lender: ${json.parsedMetrics?.lender_name || 'N/A'}, Principal: ₹${(json.parsedMetrics?.original_principal || 0).toLocaleString(
             'en-IN'
-          )}, Target Waiver: ₹${json.parsedMetrics.target_settlement_amount.toLocaleString('en-IN')}.`
+          )}, Target Waiver: ₹${(json.parsedMetrics?.target_settlement_amount || 0).toLocaleString('en-IN')}.`
         );
         if (onRefreshData) onRefreshData();
       } else {
@@ -151,7 +151,7 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <span className={`badge-status ${lead.status}`}>
-                      {isSettled ? '🎉 Case Settled' : lead.status.replace('_', ' ')}
+                      {isSettled ? '🎉 Case Settled' : (lead.status || 'new').replace('_', ' ')}
                     </span>
                     <span
                       style={{
@@ -171,7 +171,7 @@ export const EmployeeClientCards: React.FC<EmployeeClientCardsProps> = ({
                     {lead.fullName}
                   </h3>
                   <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                    📞 {lead.phone} • {lead.source.replace('_', ' ').toUpperCase()}
+                    📞 {lead.phone} • {(lead.source || 'inbound_call').replace('_', ' ').toUpperCase()}
                   </p>
 
                   {/* Debt Portfolio Pill */}

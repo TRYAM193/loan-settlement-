@@ -135,7 +135,7 @@ Issued by TRYAM Enterprise Debt Hub`;
 
       if (json.success) {
         setNotificationStatus(
-          `✅ Lead assigned to ${json.data.employee.name}. Client (${json.data.clientNotificationResult.channelUsed.toUpperCase()}) & Employee alerts sent.`
+          `✅ Lead assigned to ${json.data?.employee?.name || 'Specialist'}. Client (${json.data?.clientNotificationResult?.channelUsed?.toUpperCase() || 'WHATSAPP'}) & Employee alerts sent.`
         );
         if (onRefreshData) onRefreshData();
       } else {
@@ -208,7 +208,7 @@ Issued by TRYAM Enterprise Debt Hub`;
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
           <div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <span className={`badge-status ${lead.status}`}>{lead.status.replace('_', ' ')}</span>
+              <span className={`badge-status ${lead.status || 'new'}`}>{(lead.status || 'new').replace('_', ' ')}</span>
               <span
                 style={{
                   fontSize: '11px',
@@ -422,7 +422,7 @@ Issued by TRYAM Enterprise Debt Hub`;
                 <option value="">Select Employee to Assign...</option>
                 {employees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.name} ({emp.role.replace('_', ' ')}) - {emp.activeCases} active cases
+                    {emp.name} ({(emp.role || 'agent').replace('_', ' ')}) - {emp.activeCases} active cases
                   </option>
                 ))}
               </select>

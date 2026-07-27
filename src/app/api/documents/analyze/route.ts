@@ -109,7 +109,7 @@ export async function POST(req: Request) {
         summary,
         extractedLenders,
         totalExtracted,
-        log: logData[0],
+        log: logData && logData.length > 0 ? logData[0] : null,
       },
     });
   } catch (err: any) {

@@ -143,7 +143,7 @@ export async function POST(req: Request) {
         assignedEmployeeId: assignedEmpId,
         assignedEmployee: assignedEmp ? { name: assignedEmp.name, phone: assignedEmp.phone } : null,
         whatsappResult,
-        log: logData[0],
+        log: logData && logData.length > 0 ? logData[0] : null,
       },
     });
   } catch (err: any) {
