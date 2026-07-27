@@ -77,26 +77,38 @@ LIVE AGENCY METRICS:
 - Total Agency Debt Portfolio: ₹${totalDebt.toLocaleString('en-IN')}
 - Active Employees: ${allEmployees.length} (${availableAgents.length} Available)
 - Active Settlements: ${activeSettlements.length}
+- Settled/Completed Cases: ${activeLeads.filter((l: any) => l.status === 'settled' || l.status === 'completed').length}
 
 EMPLOYEE WORKLOAD BREAKDOWN:
 ${allEmployees
   .map(
     (e: any) =>
-      `• ${e.name} (${e.role}): ${e.active_caseload || 0} active cases | Status: ${e.status || 'available'}`
+      `• ${e.name} (${e.role}): ${e.active_caseload || 0} active cases | Status: ${e.status || 'available'} | ID: ${e.id}`
   )
   .join('\n')}
 
-RECENT CLIENT LEADS:
+ALL CLIENT LEADS DATABASE (${activeLeads.length} total):
 ${activeLeads
-  .slice(0, 5)
   .map(
     (l: any) =>
-      `• Lead: ${l.full_name || 'Inbound Caller'} (${l.phone}) | Status: ${l.status} | Debt: ₹${Number(l.total_debt_amount || 0).toLocaleString('en-IN')}`
+      `• ${l.full_name || 'Caller'} (${l.phone || 'N/A'}) | Status: ${l.status || 'new'} | Debt: ₹${Number(l.total_debt_amount || 0).toLocaleString('en-IN')} | Lenders: ${l.lender_names || l.lenders || 'Unknown'} | Harassment: ${l.harassment_reported ? 'YES' : 'No'} | Distress: ${l.distress_score || 'N/A'} | Assigned To: ${l.assigned_employee_name || 'Unassigned'} | Source: ${l.source || 'N/A'}`
+  )
+  .join('\n')}
+
+ALL SETTLEMENT RECORDS (${activeSettlements.length} total):
+${activeSettlements
+  .map(
+    (s: any) =>
+      `• Settlement ID: ${s.id} | Lead: ${s.lead_id || 'N/A'} | Lender: ${s.lender_name || 'Unknown'} | Principal: ₹${Number(s.principal_amount || 0).toLocaleString('en-IN')} | Settlement Target: ₹${Number(s.settlement_target || s.target_amount || 0).toLocaleString('en-IN')} | Status: ${s.status || 'pending'} | Created: ${s.created_at || 'N/A'}`
   )
   .join('\n')}
 
 GUIDELINES:
-- Provide concise, data-driven responses based on the live agency metrics above.
+- Provide concise, data-driven responses based on the FULL live agency database above.
+- You have access to ALL leads including settled, completed, and in-progress cases.
+- When asked about specific employees, cross-reference their assigned leads from the database.
+- When asked about settlements, use the settlement records above.
+- Format currency in Indian Rupees (₹) with proper comma formatting.
 `;
 
     const apiKey = customApiKey || process.env.GEMINI_API_KEY || '';
