@@ -291,26 +291,12 @@ export const AdminChatbot: React.FC<AdminChatbotProps> = ({
                   TRYAM AI Copilot
                 </h3>
                 <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                  Realtime CRM & Supabase Intelligence
+                  Realtime Operational Intelligence
                 </span>
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: '6px' }}>
-              <button
-                onClick={() => setShowKeyConfig(!showKeyConfig)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  padding: '6px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                }}
-                title="Configure API Key"
-              >
-                <Key size={16} />
-              </button>
               <button
                 onClick={() => setIsOpen(false)}
                 style={{

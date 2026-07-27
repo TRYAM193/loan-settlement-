@@ -28,7 +28,7 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
   const [debtAmount, setDebtAmount] = useState('450000');
   const [distressScore, setDistressScore] = useState<'Low' | 'Medium' | 'High' | 'Critical'>('Critical');
   const [harassment, setHarassment] = useState(true);
-  const [notes, setNotes] = useState('Ingested via Sarvam AI saarika:v2.5 Kannada STT. Extracted HDFC & ICICI debt liabilities.');
+  const [notes, setNotes] = useState('Ingested via TRYAM Enterprise Regional Speech STT. Extracted HDFC & ICICI debt liabilities.');
 
   // Call simulation & Audio Upload state
   const [selectedPreset, setSelectedPreset] = useState<'kannada_hdfc' | 'mumbai_sbi'>('kannada_hdfc');
@@ -53,7 +53,7 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
       distress: 'Critical' as const,
       harassment: true,
       rawAudioText: 'Nanage HDFC loan (Rs. 2.8 Lakhs) matte ICICI credit card (Rs. 1.7 Lakhs) total debt idhe. Recovery agents nanna office ge call maadi workplace harassment madtha idhare. I need urgent legal protection under RBI rules.',
-      summary: 'STT: Sarvam AI saarika:v2.5 (Kannada). Extracted Lenders: HDFC Bank (₹2.8L), ICICI Bank (₹1.7L). Total Debt: ₹4,50,000. Flagged: Workplace Harassment (Critical).',
+      summary: 'STT: TRYAM Enterprise Regional Speech (Kannada). Extracted Lenders: HDFC Bank (₹2.8L), ICICI Bank (₹1.7L). Total Debt: ₹4,50,000. Flagged: Workplace Harassment (Critical).',
     },
     mumbai_sbi: {
       name: 'Anjali Sharma (Mumbai)',
@@ -63,7 +63,7 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
       distress: 'High' as const,
       harassment: false,
       rawAudioText: 'I am calling regarding my debt settlement. I have ₹8.2 Lakhs total debt across SBI Personal Loan (₹5.2L) and Bajaj Finance (₹3.0L). Overdue by 4 months due to business loss.',
-      summary: 'STT: Groq Whisper-Large-v3. Extracted Lenders: SBI Personal Loan (₹5.2L), Bajaj Finance (₹3.0L). Total Debt: ₹8,20,000. Distress: High.',
+      summary: 'STT: TRYAM Enterprise High-Fidelity STT. Extracted Lenders: SBI Personal Loan (₹5.2L), Bajaj Finance (₹3.0L). Total Debt: ₹8,20,000. Distress: High.',
     },
   };
 
@@ -84,7 +84,7 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
       setNotes(data.summary);
       setSource('inbound_call');
       setIsTranscribing(false);
-      setSttSuccessMessage(`✨ Transcribed via Sarvam AI & Gemini 2.5 Flash! Extracted ₹${Number(data.debt).toLocaleString('en-IN')} debt.`);
+      setSttSuccessMessage(`✨ Transcribed via TRYAM Proprietary Financial AI! Extracted ₹${Number(data.debt).toLocaleString('en-IN')} debt.`);
     }, 800);
   };
 
@@ -97,7 +97,7 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
 
     try {
       if (audioFile && activeTab === 'upload_audio') {
-        setProcessingStatus('Uploading audio to Supabase Storage...');
+        setProcessingStatus('Uploading audio to Enterprise Cloud Vault...');
         const formData = new FormData();
         formData.append('audio', audioFile);
         formData.append('caller_phone', phone);
@@ -105,13 +105,15 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
         formData.append('duration', '0');
         formData.append('full_name', fullName);
 
-        setProcessingStatus('Transcribing call audio with Sarvam AI saarika:v2.5...');
+        setProcessingStatus('Transcribing call audio with TRYAM Enterprise Regional Speech Engine...');
         const res = await fetch('/api/ingest/android-call', {
           method: 'POST',
           body: formData,
         });
 
         const json = await res.json();
+        setIsProcessing(false);
+
         if (json.success) {
           onAddLead(
             {
@@ -119,19 +121,21 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
               fullName: json.data?.full_name || fullName,
               phone: json.data?.phone || phone,
               email: json.data?.email || email || `${fullName.toLowerCase().replace(/\s+/g, '.')}@client.com`,
-              source: 'inbound_call',
-              status: json.data?.status || 'assigned',
-              assignedEmployeeId: json.data?.assigned_employee_id || assignedEmp?.id,
+              source: json.data?.source || source,
+              status: json.data?.status || 'new',
+              assignedEmployeeId: json.data?.assigned_employee_id || (assignedEmp ? assignedEmp.id : ''),
               assignedEmployeeName: assignedEmp ? assignedEmp.name : 'Assigned Agent',
               totalDebtAmount: Number(json.data?.total_debt_amount || numDebt),
-              lenders: [{ name: 'AI-Extracted Debt', amount: Number(json.data?.total_debt_amount || numDebt), type: 'Credit Debt' }],
+              lenders: [{ name: 'Extracted Liabilities', amount: Number(json.data?.total_debt_amount || numDebt), type: 'Credit Debt' }],
               distressScore: json.data?.distress_score || distressScore,
-              harassmentReported: json.data?.harassment_reported || harassment,
+              harassmentReported: json.data?.harassment_flag ?? harassment,
               createdAt: json.data?.created_at || new Date().toISOString(),
-              notes: `STT Engine: ${json.sttProviderUsed || 'Sarvam AI saarika:v2.5'}. ${json.rawTranscript ? 'Transcript: ' + json.rawTranscript.substring(0, 100) + '...' : ''}`,
+              notes: `STT Engine: TRYAM Enterprise Regional Speech Engine. ${json.rawTranscript ? 'Transcript: ' + json.rawTranscript.substring(0, 100) + '...' : ''}`,
             },
             assignedEmp ? assignedEmp.id : ''
           );
+          onClose();
+          return;
         }
       } else {
         setProcessingStatus('Creating lead and routing to specialist...');
@@ -261,7 +265,7 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
             </h2>
           </div>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            Sarvam AI Regional Speech STT (Kannada/Hindi) + Gemini 2.5 Flash Financial Extraction
+            TRYAM Enterprise Regional Speech STT + Proprietary Financial AI Extraction
           </p>
         </div>
 
@@ -397,7 +401,7 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
             {isTranscribing && (
               <div style={{ padding: '12px', background: 'rgba(0, 113, 227, 0.08)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: 'var(--accent-apple-blue)' }}>
                 <Sparkles size={16} className="spin" />
-                <span>Running Sarvam AI STT & Gemini 2.5 Flash Financial Extraction...</span>
+                <span>Running TRYAM Enterprise Regional Speech STT & Proprietary Financial Extraction...</span>
               </div>
             )}
 
@@ -439,7 +443,7 @@ export const IngestLeadModal: React.FC<IngestLeadModalProps> = ({
                 {audioFile ? audioFile.name : 'Click to Upload Call Audio File'}
               </p>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                Auto-transcribes via Sarvam AI saarika:v2.5 & stores in Supabase
+                Auto-transcribes via TRYAM Enterprise Speech Engine & stores in Cloud Vault
               </span>
             </div>
           </div>
