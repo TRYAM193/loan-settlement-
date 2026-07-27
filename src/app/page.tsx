@@ -49,6 +49,20 @@ export default function Home() {
   });
 
   // Load initial data from Supabase DB
+  // Helper to deduplicate leads strictly by ID or normalized phone number
+  const deduplicateLeads = (leadsList: Lead[]): Lead[] => {
+    const seen = new Set<string>();
+    const result: Lead[] = [];
+    for (const lead of leadsList) {
+      const normPhone = (lead.phone || '').replace(/\s+/g, '');
+      const key = lead.id || normPhone;
+      if (key && seen.has(key)) continue;
+      if (key) seen.add(key);
+      result.push(lead);
+    }
+    return result;
+  };
+
   const loadDatabaseData = async () => {
     setIsLoadingDb(true);
     try {
@@ -58,7 +72,7 @@ export default function Home() {
         fetchSettlements(),
       ]);
       setEmployees(dbEmployees);
-      setLeads(dbLeads);
+      setLeads(deduplicateLeads(dbLeads));
       setSettlements(dbSettlements);
     } catch (err) {
       console.error('Failed loading Supabase data:', err);
@@ -76,7 +90,7 @@ export default function Home() {
         fetchSettlements(),
       ]);
       setEmployees(dbEmployees);
-      setLeads(dbLeads);
+      setLeads(deduplicateLeads(dbLeads));
       setSettlements(dbSettlements);
     } catch (err) {
       console.error('Failed silent sync:', err);
@@ -119,7 +133,7 @@ export default function Home() {
 
   // Handle manual lead ingestion & auto-assignment increment
   const handleAddLead = (newLead: Lead, assignedEmpId: string) => {
-    setLeads((prev) => [newLead, ...prev]);
+    setLeads((prev) => deduplicateLeads([newLead, ...prev]));
 
     setEmployees((prev) =>
       prev.map((emp): Employee => {
