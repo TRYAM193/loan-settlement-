@@ -67,31 +67,53 @@ export default function Home() {
     }
   };
 
+  // Silent background fetch without flickering UI spinners
+  const fetchFreshData = async () => {
+    try {
+      const [dbEmployees, dbLeads, dbSettlements] = await Promise.all([
+        fetchEmployees(),
+        fetchLeads(),
+        fetchSettlements(),
+      ]);
+      setEmployees(dbEmployees);
+      setLeads(dbLeads);
+      setSettlements(dbSettlements);
+    } catch (err) {
+      console.error('Failed silent sync:', err);
+    }
+  };
+
   useEffect(() => {
     loadDatabaseData();
 
-    // Subscribe to Supabase Realtime changes for Live Dashboard Popups
+    // 1. Subscribe to Supabase Realtime changes for Live Dashboard Popups
     const channel = supabase
       .channel('tryam_db_changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'leads' },
-        () => loadDatabaseData()
+        () => fetchFreshData()
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'employees' },
-        () => loadDatabaseData()
+        () => fetchFreshData()
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'settlements' },
-        () => loadDatabaseData()
+        () => fetchFreshData()
       )
       .subscribe();
 
+    // 2. High-frequency 3-second background polling timer so incoming calls update live instantly
+    const pollInterval = setInterval(() => {
+      fetchFreshData();
+    }, 3000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollInterval);
     };
   }, []);
 
