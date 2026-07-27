@@ -46,7 +46,7 @@ export async function POST(req: Request) {
       phone: body.phone,
       email: body.email || '',
       source: body.source || 'web_ingest',
-      status: 'assigned',
+      status: body.status || 'new',
       assigned_employee_id: assignedEmpId || null,
       total_debt_amount: Math.max(0, Math.min(Number(body.totalDebtAmount || body.total_debt_amount || 0), 999999999)),
     };
