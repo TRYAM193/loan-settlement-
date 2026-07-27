@@ -72,7 +72,7 @@ export async function POST(req: Request) {
               source: 'inbound_call',
               status: 'assigned',
               assigned_employee_id: assignedEmpId,
-              total_debt_amount: totalDebtAmount,
+              total_debt_amount: Math.max(0, Math.min(Number(totalDebtAmount || 0), 999999999)),
               updated_at: new Date().toISOString(),
             },
           ],

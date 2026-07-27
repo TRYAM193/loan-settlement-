@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       source: body.source || 'web_ingest',
       status: 'assigned',
       assigned_employee_id: assignedEmpId || null,
-      total_debt_amount: Number(body.totalDebtAmount || body.total_debt_amount || 0),
+      total_debt_amount: Math.max(0, Math.min(Number(body.totalDebtAmount || body.total_debt_amount || 0), 999999999)),
     };
 
     const { data, error } = await supabase.from('leads').insert([payloadToInsert]).select();

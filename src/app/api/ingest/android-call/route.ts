@@ -266,7 +266,7 @@ export async function POST(req: NextRequest) {
         source: 'call',
         status: existingStatus,
         assigned_employee_id: assignedEmployeeId,
-        total_debt_amount: aiExtraction.total_debt || 0,
+        total_debt_amount: Math.max(0, Math.min(Number(aiExtraction.total_debt || 0), 999999999)),
         distress_score: (aiExtraction.distress_score || 'Medium').toLowerCase(),
         updated_at: new Date().toISOString()
       }, { onConflict: 'phone' })
