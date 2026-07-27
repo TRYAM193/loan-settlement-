@@ -51,10 +51,13 @@ export async function POST(req: Request) {
       total_debt_amount: Math.max(0, Math.min(Number(body.totalDebtAmount || body.total_debt_amount || 0), 999999999)),
     };
 
-    const { data, error } = await supabase.from('leads').insert([payloadToInsert]).select();
+    const { data, error } = await supabase
+      .from('leads')
+      .upsert([payloadToInsert], { onConflict: 'phone' })
+      .select();
 
     if (error || !data || data.length === 0) {
-      return NextResponse.json({ success: false, error: error?.message || 'Failed to insert lead' }, { status: 500 });
+      return NextResponse.json({ success: false, error: error?.message || 'Failed to insert or update lead' }, { status: 500 });
     }
 
     const createdLead = data[0];
