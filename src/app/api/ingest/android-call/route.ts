@@ -73,8 +73,13 @@ export async function POST(req: NextRequest) {
         // Option 1: Sarvam AI saarika:v2.5 (Kannada, Hindi, Hinglish, Kanglish Speech STT)
         try {
           console.log('[STT] Transcribing via SARVAM AI saarika:v2.5 STT API...');
-          const sarvamForm = new FormData();
-          const blob = new Blob([buffer], { type: audioFile.type || 'audio/m4a' });
+          // Map audio/m4a to audio/x-m4a or audio/mp4 for Sarvam AI API compliance
+          let sarvamMimeType = (audioFile.type || 'audio/x-m4a').split(';')[0].trim();
+          if (sarvamMimeType === 'audio/m4a' || sarvamMimeType === 'audio/mp4a') {
+            sarvamMimeType = 'audio/x-m4a';
+          }
+
+          const blob = new Blob([buffer], { type: sarvamMimeType });
           sarvamForm.append('file', blob, 'recording.m4a');
           sarvamForm.append('model', 'saarika:v2.5'); // Sarvam AI flagship Kannada & Indian regional STT model
           sarvamForm.append('language_code', 'unknown'); // Auto-detect Kannada (kn-IN), Hindi, Hinglish, etc.
