@@ -71,6 +71,72 @@ export async function POST(req: Request) {
       }
     }
 
+    // 1. Identify status checking requests
+    const cleanText = messageText.toLowerCase().trim();
+    const isStatusQuery =
+      cleanText === 'status' ||
+      cleanText.includes('my status') ||
+      cleanText.includes('check status') ||
+      cleanText.includes('who is my agent') ||
+      cleanText.includes('progress');
+
+    if (isStatusQuery) {
+      // Look up existing lead in database by phone number
+      const { data: existingLeads } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('phone', formattedPhone)
+        .limit(1);
+
+      let replyMessage = '';
+
+      if (existingLeads && existingLeads.length > 0) {
+        const lead = existingLeads[0];
+        let employeeName = 'Unassigned';
+        let employeePhone = '';
+
+        if (lead.assigned_employee_id) {
+          const { data: emp } = await supabase
+            .from('employees')
+            .select('*')
+            .eq('id', lead.assigned_employee_id)
+            .single();
+          if (emp) {
+            employeeName = emp.name;
+            employeePhone = emp.phone;
+          }
+        }
+
+        const formattedStatus = (lead.status || 'new').toUpperCase().replace('_', ' ');
+
+        replyMessage = `📋 *TRYAM Case Status Update*
+
+👤 *Client:* ${lead.full_name}
+📊 *Status:* ${formattedStatus}
+💼 *Allotted Specialist:* ${employeeName} ${employeePhone ? `(${employeePhone})` : ''}
+
+_Our representative will contact you shortly regarding debt settlement negotiations._`;
+      } else {
+        replyMessage = `👋 *Welcome to TRYAM Loan Settlement CRM!*
+
+We could not find any active file registered with your phone number *${formattedPhone}*.
+
+If you would like to open a settlement file, please reply with your details and target debt liabilities (e.g., "I want to settle ₹5,00,000 credit debt").`;
+      }
+
+      // Send the outbound WhatsApp reply back to client
+      const { sendWhatsAppMessage } = await import('@/lib/whatsappService');
+      const isSent = await sendWhatsAppMessage(formattedPhone, replyMessage);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Status check query handled successfully',
+        type: 'status_check',
+        replySent: isSent,
+        replyText: replyMessage,
+      });
+    }
+
     // Extract Financial Metrics via TRYAM AI Engine
     const apiKey = process.env.GEMINI_API_KEY || '';
     const aiResult = await extractFinancialMetricsWithGemini(messageText, apiKey);

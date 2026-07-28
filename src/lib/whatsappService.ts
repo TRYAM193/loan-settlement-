@@ -260,3 +260,40 @@ export async function sendClientAssignmentNotification(
     statusMessage,
   };
 }
+
+/**
+ * Send outbound WhatsApp message via Meta Cloud API
+ */
+export async function sendWhatsAppMessage(toPhone: string, text: string): Promise<boolean> {
+  const metaPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const metaAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  if (!metaPhoneId || !metaAccessToken) {
+    console.log(`[WhatsApp Outbound Simulation] To: ${toPhone} | Text: ${text}`);
+    return false;
+  }
+  try {
+    const cleanRecipientPhone = formatPhoneForWhatsApp(toPhone).replace('+', '');
+    const res = await fetch(
+      `https://graph.facebook.com/v18.0/${metaPhoneId}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${metaAccessToken}`,
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: cleanRecipientPhone,
+          type: 'text',
+          text: { body: text },
+        }),
+      }
+    );
+    return res.ok;
+  } catch (err) {
+    console.error('[Meta Outbound Exception]', err);
+    return false;
+  }
+}
+
